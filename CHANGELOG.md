@@ -42,6 +42,9 @@ versionado se adoptará cuando exista la primera entrega.
   Docker en ejecución.
 - CI con GitHub Actions (`INF-007`): formato, lint, typecheck, pruebas y build
   sobre Node.js 22, con caché de npm y cancelación de ejecuciones obsoletas.
+- Publicación inicial en GitHub
+  ([`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi)) y ejecución correcta
+  del CI sobre `main`.
 
 ### Notas
 

@@ -134,8 +134,8 @@ Pasos del job:
 
 No requiere PostgreSQL porque las pruebas actuales no acceden a la base de
 datos. Cuando se añadan pruebas de integración se incorporará un servicio de
-PostgreSQL al flujo. El CI solo se activará cuando el proyecto se publique en
-GitHub.
+PostgreSQL al flujo. El CI se ejecuta en el repositorio remoto
+[`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi).
 
 ## Flujo
 

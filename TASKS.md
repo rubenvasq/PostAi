@@ -85,14 +85,15 @@ SDK, sandbox y condiciones comerciales para Colombia.
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > no se aplicó porque el daemon de Docker no estaba disponible en el entorno.
-> El flujo de `INF-007` está creado, pero solo se ejecutará cuando el proyecto
-> se publique en un repositorio de GitHub.
+> El repositorio está publicado en
+> [`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi) y el CI de `INF-007`
+> se ejecutó correctamente sobre `main`.
 
 ## Próxima acción recomendada
 
-1. Publicar el repositorio en GitHub para activar el CI (`INF-007`).
-2. Implementar autenticación y registro (`MVP-001`) en el backend; la parte
+1. Implementar autenticación y registro (`MVP-001`) en el backend; la parte
    móvil queda bloqueada hasta `ARQ-001`.
-3. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
+2. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
    en Colombia y registrar hallazgos verificados en `docs/providers/`.
-4. Aplicar la migración inicial cuando Docker esté disponible.
+3. Aplicar la migración inicial cuando Docker esté disponible.
+4. Evaluar renombrar el repositorio remoto `PosAi` a `postai` (`ADR-003`).

@@ -28,6 +28,8 @@ La decisión completa está en
 
 - **Fase:** scaffolding inicial y diseño de arquitectura.
 - **Código:** monorepo con API y panel web; app Android pendiente de `ARQ-001`.
+- **Repositorio:** publicado en GitHub
+  ([`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi)); CI en verde.
 - **Plataforma del MVP:** Android únicamente. iOS queda fuera del alcance.
 - **Proveedor SoftPOS:** no seleccionado ni validado para Colombia.
 

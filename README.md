@@ -57,10 +57,9 @@ Con Docker disponible: `npm run db:up` para PostgreSQL local. Más detalle en
 
 ## Próximos pasos
 
-1. Publicar el repositorio en GitHub para activar el CI (`INF-007`).
-2. Implementar autenticación y registro (`MVP-001`).
-3. Investigar proveedores SoftPOS con operación en Colombia (`PAY-001`).
-4. Solicitar documentación, SDK y sandbox (`PAY-002`).
-5. Decidir el stack móvil (`ARQ-001`).
+1. Implementar autenticación y registro (`MVP-001`).
+2. Investigar proveedores SoftPOS con operación en Colombia (`PAY-001`).
+3. Solicitar documentación, SDK y sandbox (`PAY-002`).
+4. Decidir el stack móvil (`ARQ-001`).
 
 Consulta [`TASKS.md`](TASKS.md) para el detalle.
