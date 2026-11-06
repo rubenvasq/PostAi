@@ -86,7 +86,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > no se aplicó porque el daemon de Docker no estaba disponible en el entorno.
 > El repositorio está publicado en
-> [`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi) y el CI de `INF-007`
+> [`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi) y el CI de `INF-007`
 > se ejecutó correctamente sobre `main`.
 
 ## Próxima acción recomendada
@@ -96,4 +96,3 @@ SDK, sandbox y condiciones comerciales para Colombia.
 2. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
    en Colombia y registrar hallazgos verificados en `docs/providers/`.
 3. Aplicar la migración inicial cuando Docker esté disponible.
-4. Evaluar renombrar el repositorio remoto `PosAi` a `postai` (`ADR-003`).

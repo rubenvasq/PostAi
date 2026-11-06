@@ -13,7 +13,7 @@
 | Equipo / titular | **Equipo PostAi** |
 | Producto | **PostAi** |
 | Descripción corta | Plataforma POS + SoftPOS para Android |
-| Repositorio / slug | `postai` (GitHub: [`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi)) |
+| Repositorio / slug | `postai` (GitHub: [`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)) |
 | Carpeta local | `NFC` (solo ruta de trabajo, no es el nombre del producto) |
 | Paquetes | `@postai/api`, `@postai/admin`, `@postai/shared` |
 | API | PostAi API (`/v1`) |
@@ -29,7 +29,7 @@ La decisión completa está en
 - **Fase:** scaffolding inicial y diseño de arquitectura.
 - **Código:** monorepo con API y panel web; app Android pendiente de `ARQ-001`.
 - **Repositorio:** publicado en GitHub
-  ([`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi)); CI en verde.
+  ([`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)); CI en verde.
 - **Plataforma del MVP:** Android únicamente. iOS queda fuera del alcance.
 - **Proveedor SoftPOS:** no seleccionado ni validado para Colombia.
 

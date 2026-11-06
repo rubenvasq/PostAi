@@ -43,7 +43,7 @@ versionado se adoptará cuando exista la primera entrega.
 - CI con GitHub Actions (`INF-007`): formato, lint, typecheck, pruebas y build
   sobre Node.js 22, con caché de npm y cancelación de ejecuciones obsoletas.
 - Publicación inicial en GitHub
-  ([`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi)) y ejecución correcta
+  ([`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)) y ejecución correcta
   del CI sobre `main`.
 
 ### Notas
@@ -51,5 +51,5 @@ versionado se adoptará cuando exista la primera entrega.
 - El backend y el panel web tienen scaffolding ejecutable. La app Android sigue
   pendiente de la decisión de stack (`ARQ-001`) y el proveedor SoftPOS de
   `PAY-001`.
-- El repositorio remoto es [`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi).
-  Conserva el nombre `PosAi` aunque el slug técnico oficial sea `postai`.
+- El repositorio remoto es
+  [`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi).

@@ -1,11 +1,11 @@
 # PostAi
 
-[![CI](https://github.com/rubenvasq/PosAi/actions/workflows/ci.yml/badge.svg)](https://github.com/rubenvasq/PosAi/actions/workflows/ci.yml)
+[![CI](https://github.com/rubenvasq/PostAi/actions/workflows/ci.yml/badge.svg)](https://github.com/rubenvasq/PostAi/actions/workflows/ci.yml)
 
 **Plataforma POS + SoftPOS para Android.**
 
 Equipo: **Equipo PostAi**. Repositorio: `postai`
-([`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi)). Nombre confirmado por
+([`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)). Nombre confirmado por
 el usuario y formalizado en
 [`ADR-003`](docs/architecture/ADR-003-nombre-y-nomenclatura.md).
 

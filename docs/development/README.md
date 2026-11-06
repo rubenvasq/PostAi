@@ -11,7 +11,7 @@ Guía de entorno, convenciones y flujo de trabajo del repositorio `postai`, del
 | Elemento | Valor |
 | --- | --- |
 | Equipo | **Equipo PostAi** |
-| Repositorio | `postai` (remoto: `rubenvasq/PosAi`) |
+| Repositorio | `postai` (remoto: `rubenvasq/PostAi`) |
 | Paquetes | `@postai/api`, `@postai/admin`, `@postai/shared` |
 | Base de datos | `postai` |
 | Docker Compose | `postai` |
@@ -135,7 +135,7 @@ Pasos del job:
 No requiere PostgreSQL porque las pruebas actuales no acceden a la base de
 datos. Cuando se añadan pruebas de integración se incorporará un servicio de
 PostgreSQL al flujo. El CI se ejecuta en el repositorio remoto
-[`rubenvasq/PosAi`](https://github.com/rubenvasq/PosAi).
+[`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi).
 
 ## Flujo
 

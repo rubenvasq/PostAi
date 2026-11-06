@@ -26,7 +26,7 @@ Se adopta una identidad única y se aplica en toda la documentación:
 | Producto | **PostAi** |
 | Nombre de referencia | `Equipo PostAi` |
 | Descripción corta (ES) | Plataforma POS + SoftPOS para Android |
-| Repositorio / slug | `postai` (remoto GitHub: `rubenvasq/PosAi`) |
+| Repositorio / slug | `postai` (remoto GitHub: `rubenvasq/PostAi`) |
 | Carpeta local actual | `NFC` (solo ruta de trabajo; no es el nombre del producto) |
 | Paquete raíz npm | `postai` (privado) |
 | Scope de paquetes | `@postai/` (`@postai/api`, `@postai/admin`, `@postai/shared`) |
@@ -62,9 +62,6 @@ Se adopta una identidad única y se aplica en toda la documentación:
 
 - La carpeta local `NFC` seguirá apareciendo en rutas absolutas; no se renombra
   para no romper el entorno de trabajo.
-- El remoto de GitHub se creó como `PosAi`, sin la `t` del slug técnico
-  `postai`. Mientras no se decida renombrarlo, los paquetes, la base de datos y
-  los contenedores mantienen `postai`.
 - El `applicationId` y el dominio de producción son propuestas y requieren
   confirmación antes de publicar.
 - Si el usuario confirma otro nombre comercial, este ADR se sustituye por uno
@@ -77,14 +74,15 @@ Se adopta una identidad única y se aplica en toda la documentación:
 - [x] Alinear `docs/api/` y `docs/database/`.
 - [ ] Confirmar nombre comercial definitivo y `applicationId` antes de publicar.
 - [x] Usar estos valores en el scaffolding de `INF-001`.
-- [ ] Evaluar renombrar el repositorio remoto de `PosAi` a `postai` para alinear
-  el slug con la identidad oficial.
+- [x] Publicar el repositorio en GitHub como `rubenvasq/PostAi`.
 
 ## Historial
 
 - **2026-11-06:** se registró inicialmente `softpos-platform` como marcador
   tomado del documento de contexto. El usuario confirmó **Equipo PostAi**; se
   reemplaza por **PostAi** (`postai`).
+- **2026-11-06:** el repositorio remoto se publicó inicialmente como `PosAi` y
+  se renombró a `PostAi` para alinear el nombre con la identidad oficial.
 
 ## Referencias
 
