@@ -1,0 +1,855 @@
+// ============================================================================
+// PostAi (postai) — Equipo PostAi
+// Esquema Prisma del MVP (ARQ-002)
+// Base de datos: PostgreSQL `postai`
+// ----------------------------------------------------------------------------
+// Esquema ejecutable del backend. El diseño y las reglas están en
+// docs/database/data-model.md.
+//
+// Convenciones:
+// - Dinero: BigInt; COP en pesos enteros (exponente 0) en el MVP (ADR-002).
+// - Cantidades: Decimal(14,3).
+// - IDs: UUID v4.
+// - Nombres de tablas en snake_case mediante @@map.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum MerchantStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum ProductType {
+  PRODUCT
+  SERVICE
+}
+
+enum SaleStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  CANCELLED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum PaymentAttemptStatus {
+  STARTED
+  PENDING
+  APPROVED
+  REJECTED
+  FAILED
+  CANCELLED
+  TIMEOUT
+}
+
+enum RefundStatus {
+  CREATED
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum SettlementStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum PaymentMethodType {
+  CASH
+  TRANSFER
+  CARD_SOFTPOS
+  CARD_SIMULATED
+  OTHER
+}
+
+enum PaymentProviderMode {
+  SANDBOX
+  PRODUCTION
+}
+
+enum PaymentProviderStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum InventoryMovementType {
+  INITIAL
+  PURCHASE
+  SALE
+  RETURN
+  ADJUSTMENT
+  LOSS
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  OPENING
+  SALE
+  REFUND
+  EXPENSE
+  WITHDRAWAL
+  DEPOSIT
+  ADJUSTMENT
+  CLOSING
+}
+
+enum CashDirection {
+  IN
+  OUT
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+// ----------------------------------------------------------------------------
+// Acceso y multi-tenant
+// ----------------------------------------------------------------------------
+
+model Merchant {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String
+  legalName String?
+  taxId     String?
+  currency  String         @default("COP") @db.Char(3)
+  timezone  String         @default("America/Bogota")
+  status    MerchantStatus @default(ACTIVE)
+  settings  Json           @default("{}")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  branches           Branch[]
+  memberships        Membership[]
+  roles              Role[]
+  categories         Category[]
+  products           Product[]
+  taxRates           TaxRate[]
+  customers          Customer[]
+  sales              Sale[]
+  payments           Payment[]
+  paymentMethods     PaymentMethod[]
+  paymentProviders   PaymentProvider[]
+  inventoryItems     InventoryItem[]
+  inventoryMovements InventoryMovement[]
+  cashSessions       CashSession[]
+  cashMovements      CashMovement[]
+  expenses           Expense[]
+  discounts          Discount[]
+  refunds            Refund[]
+  settlements        Settlement[]
+  auditLogs          AuditLog[]
+
+  @@map("merchants")
+}
+
+model Branch {
+  id         String   @id @default(uuid()) @db.Uuid
+  merchantId String   @db.Uuid
+  code       String
+  name       String
+  address    String?
+  phone      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  merchant           Merchant            @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  sales              Sale[]
+  inventoryItems     InventoryItem[]
+  inventoryMovements InventoryMovement[]
+  cashSessions       CashSession[]
+  cashMovements      CashMovement[]
+  expenses           Expense[]
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+  @@map("branches")
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  memberships        Membership[]
+  refreshTokens      RefreshToken[]
+  sales              Sale[]              @relation("SaleSeller")
+  auditLogs          AuditLog[]          @relation("AuditActor")
+  cashSessionsOpened CashSession[]       @relation("CashSessionOpenedBy")
+  cashSessionsClosed CashSession[]       @relation("CashSessionClosedBy")
+  cashMovements      CashMovement[]      @relation("CashMovementCreatedBy")
+  inventoryMovements InventoryMovement[] @relation("InventoryMovementCreatedBy")
+  discounts          Discount[]          @relation("DiscountCreatedBy")
+  expenses           Expense[]           @relation("ExpenseCreatedBy")
+  refundsCreated     Refund[]            @relation("RefundCreatedBy")
+
+  @@map("users")
+}
+
+model Membership {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  merchantId String           @db.Uuid
+  roleId     String           @db.Uuid
+  status     MembershipStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  role     Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, merchantId])
+  @@index([merchantId])
+  @@index([roleId])
+  @@map("memberships")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  merchantId  String   @db.Uuid
+  name        String
+  code        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  merchant    Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  permissions RolePermission[]
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  merchantId  String?  @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  merchant Merchant? @relation(fields: [merchantId], references: [id], onDelete: SetNull)
+  actor    User?     @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([merchantId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ----------------------------------------------------------------------------
+// Catálogo e inventario
+// ----------------------------------------------------------------------------
+
+model Category {
+  id         String   @id @default(uuid()) @db.Uuid
+  merchantId String   @db.Uuid
+  name       String
+  color      String?
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([merchantId, name])
+  @@index([merchantId])
+  @@map("categories")
+}
+
+model TaxRate {
+  id         String   @id @default(uuid()) @db.Uuid
+  merchantId String   @db.Uuid
+  name       String
+  rateBp     Int
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([merchantId, name])
+  @@index([merchantId])
+  @@map("tax_rates")
+}
+
+model Product {
+  id             String      @id @default(uuid()) @db.Uuid
+  merchantId     String      @db.Uuid
+  categoryId     String?     @db.Uuid
+  taxRateId      String?     @db.Uuid
+  type           ProductType @default(PRODUCT)
+  name           String
+  sku            String?
+  barcode        String?
+  description    String?
+  priceMinor     BigInt
+  currency       String      @default("COP") @db.Char(3)
+  trackInventory Boolean     @default(true)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  merchant       Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  category       Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  taxRate        TaxRate?         @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
+  variants       ProductVariant[]
+  saleItems      SaleItem[]
+  inventoryItems InventoryItem[]
+
+  // Los NULL se consideran distintos en PostgreSQL: permite varios productos
+  // sin SKU/código, pero exige unicidad cuando el valor existe.
+  @@unique([merchantId, sku])
+  @@unique([merchantId, barcode])
+  @@index([merchantId, name])
+  @@index([merchantId, isActive])
+  @@map("products")
+}
+
+model ProductVariant {
+  id         String   @id @default(uuid()) @db.Uuid
+  productId  String   @db.Uuid
+  name       String
+  sku        String?
+  priceMinor BigInt?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  saleItems SaleItem[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model InventoryItem {
+  id                String   @id @default(uuid()) @db.Uuid
+  merchantId        String   @db.Uuid
+  branchId          String   @db.Uuid
+  productId         String   @db.Uuid
+  quantity          Decimal  @default(0) @db.Decimal(14, 3)
+  lowStockThreshold Decimal? @db.Decimal(14, 3)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  merchant  Merchant            @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  branch    Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product   Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  movements InventoryMovement[]
+
+  @@unique([branchId, productId])
+  @@index([merchantId])
+  @@map("inventory_items")
+}
+
+model InventoryMovement {
+  id               String                @id @default(uuid()) @db.Uuid
+  merchantId       String                @db.Uuid
+  branchId         String                @db.Uuid
+  inventoryItemId  String                @db.Uuid
+  type             InventoryMovementType
+  quantityDelta    Decimal               @db.Decimal(14, 3)
+  previousQuantity Decimal               @db.Decimal(14, 3)
+  newQuantity      Decimal               @db.Decimal(14, 3)
+  referenceType    String?
+  referenceId      String?
+  reason           String?
+  createdByUserId  String?               @db.Uuid
+  createdAt        DateTime              @default(now())
+
+  merchant      Merchant      @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  createdBy     User?         @relation("InventoryMovementCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([inventoryItemId, createdAt])
+  @@index([merchantId, createdAt])
+  @@map("inventory_movements")
+}
+
+// ----------------------------------------------------------------------------
+// Clientes y ventas
+// ----------------------------------------------------------------------------
+
+model Customer {
+  id         String   @id @default(uuid()) @db.Uuid
+  merchantId String   @db.Uuid
+  name       String
+  email      String?
+  phone      String?
+  taxId      String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  sales    Sale[]
+
+  @@index([merchantId, name])
+  @@index([merchantId, phone])
+  @@map("customers")
+}
+
+model Sale {
+  id             String     @id @default(uuid()) @db.Uuid
+  merchantId     String     @db.Uuid
+  branchId       String     @db.Uuid
+  sellerUserId   String     @db.Uuid
+  customerId     String?    @db.Uuid
+  status         SaleStatus @default(DRAFT)
+  currency       String     @default("COP") @db.Char(3)
+  subtotalMinor  BigInt     @default(0)
+  discountMinor  BigInt     @default(0)
+  taxMinor       BigInt     @default(0)
+  totalMinor     BigInt     @default(0)
+  refundedMinor  BigInt     @default(0)
+  receiptNumber  String?
+  idempotencyKey String?
+  notes          String?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  merchant  Merchant   @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  seller    User       @relation("SaleSeller", fields: [sellerUserId], references: [id], onDelete: Restrict)
+  customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items     SaleItem[]
+  payments  Payment[]
+  discounts Discount[]
+
+  @@unique([merchantId, receiptNumber])
+  @@unique([merchantId, idempotencyKey])
+  @@index([merchantId, createdAt])
+  @@index([merchantId, status])
+  @@index([branchId, createdAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  saleId         String   @db.Uuid
+  productId      String   @db.Uuid
+  variantId      String?  @db.Uuid
+  productName    String
+  sku            String?
+  quantity       Decimal  @db.Decimal(14, 3)
+  unitPriceMinor BigInt
+  discountMinor  BigInt   @default(0)
+  taxRateBp      Int      @default(0)
+  taxMinor       BigInt   @default(0)
+  lineTotalMinor BigInt
+  createdAt      DateTime @default(now())
+
+  sale      Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  discounts Discount[]
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
+}
+
+model Discount {
+  id              String       @id @default(uuid()) @db.Uuid
+  merchantId      String       @db.Uuid
+  saleId          String       @db.Uuid
+  saleItemId      String?      @db.Uuid
+  type            DiscountType
+  percentBp       Int?
+  amountMinor     BigInt
+  reason          String?
+  createdByUserId String?      @db.Uuid
+  createdAt       DateTime     @default(now())
+
+  merchant  Merchant  @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  sale      Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleItem  SaleItem? @relation(fields: [saleItemId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("DiscountCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+  @@map("discounts")
+}
+
+// ----------------------------------------------------------------------------
+// Pagos y conciliación
+// ----------------------------------------------------------------------------
+
+model PaymentMethod {
+  id               String            @id @default(uuid()) @db.Uuid
+  merchantId       String            @db.Uuid
+  code             String
+  name             String
+  type             PaymentMethodType
+  isSimulated      Boolean           @default(false)
+  requiresProvider Boolean           @default(false)
+  isActive         Boolean           @default(true)
+  sortOrder        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+  @@map("payment_methods")
+}
+
+model PaymentProvider {
+  id         String                @id @default(uuid()) @db.Uuid
+  merchantId String                @db.Uuid
+  code       String
+  name       String
+  mode       PaymentProviderMode
+  status     PaymentProviderStatus @default(PENDING)
+  // Referencia a un secreto externo (gestor de secretos o variable de entorno).
+  // Nunca almacenar credenciales en esta tabla.
+  configRef  String?
+  isDefault  Boolean               @default(false)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  merchant      Merchant               @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  attempts      PaymentAttempt[]
+  webhookEvents ProviderWebhookEvent[]
+  settlements   Settlement[]
+
+  @@unique([merchantId, code, mode])
+  @@index([merchantId])
+  @@map("payment_providers")
+}
+
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  merchantId        String        @db.Uuid
+  saleId            String        @db.Uuid
+  methodId          String        @db.Uuid
+  providerId        String?       @db.Uuid
+  status            PaymentStatus @default(CREATED)
+  amountMinor       BigInt
+  currency          String        @default("COP") @db.Char(3)
+  isSimulated       Boolean       @default(false)
+  idempotencyKey    String
+  providerPaymentId String?
+  failureCode       String?
+  failureMessage    String?
+  approvedAt        DateTime?
+  cancelledAt       DateTime?
+  refundedMinor     BigInt        @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  merchant        Merchant         @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  sale            Sale             @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  method          PaymentMethod    @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  provider        PaymentProvider? @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  attempts        PaymentAttempt[]
+  refunds         Refund[]
+  settlementItems SettlementItem[]
+
+  @@unique([merchantId, idempotencyKey])
+  @@unique([providerId, providerPaymentId])
+  @@index([saleId])
+  @@index([merchantId, status])
+  @@index([merchantId, createdAt])
+  @@map("payments")
+}
+
+model PaymentAttempt {
+  id                String               @id @default(uuid()) @db.Uuid
+  paymentId         String               @db.Uuid
+  providerId        String?              @db.Uuid
+  attemptNumber     Int
+  status            PaymentAttemptStatus @default(STARTED)
+  idempotencyKey    String?
+  providerReference String?
+  // Guardar solo payloads sanitizados; nunca PAN, CVV, PIN ni secretos.
+  requestPayload    Json?
+  responsePayload   Json?
+  errorCode         String?
+  errorMessage      String?
+  startedAt         DateTime             @default(now())
+  finishedAt        DateTime?
+  createdAt         DateTime             @default(now())
+
+  payment  Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  provider PaymentProvider? @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, attemptNumber])
+  @@index([providerId, providerReference])
+  @@map("payment_attempts")
+}
+
+model ProviderWebhookEvent {
+  id                String             @id @default(uuid()) @db.Uuid
+  providerId        String             @db.Uuid
+  externalEventId   String
+  eventType         String
+  payload           Json
+  signatureVerified Boolean            @default(false)
+  status            WebhookEventStatus @default(RECEIVED)
+  errorMessage      String?
+  receivedAt        DateTime           @default(now())
+  processedAt       DateTime?
+
+  provider PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@unique([providerId, externalEventId])
+  @@index([providerId, status])
+  @@map("provider_webhook_events")
+}
+
+model Refund {
+  id               String       @id @default(uuid()) @db.Uuid
+  merchantId       String       @db.Uuid
+  paymentId        String       @db.Uuid
+  status           RefundStatus @default(CREATED)
+  amountMinor      BigInt
+  currency         String       @default("COP") @db.Char(3)
+  reason           String?
+  providerRefundId String?
+  idempotencyKey   String
+  createdByUserId  String?      @db.Uuid
+  approvedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  merchant  Merchant @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdBy User?    @relation("RefundCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([merchantId, idempotencyKey])
+  @@index([paymentId])
+  @@index([merchantId, status])
+  @@map("refunds")
+}
+
+model Settlement {
+  id          String           @id @default(uuid()) @db.Uuid
+  merchantId  String           @db.Uuid
+  providerId  String           @db.Uuid
+  externalId  String
+  periodStart DateTime
+  periodEnd   DateTime
+  grossMinor  BigInt
+  feeMinor    BigInt
+  netMinor    BigInt
+  currency    String           @default("COP") @db.Char(3)
+  status      SettlementStatus @default(PENDING)
+  settledAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  merchant Merchant         @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  provider PaymentProvider  @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  items    SettlementItem[]
+
+  @@unique([providerId, externalId])
+  @@index([merchantId, periodStart])
+  @@map("settlements")
+}
+
+model SettlementItem {
+  id           String @id @default(uuid()) @db.Uuid
+  settlementId String @db.Uuid
+  paymentId    String @db.Uuid
+  grossMinor   BigInt
+  feeMinor     BigInt
+  netMinor     BigInt
+
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  payment    Payment    @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([settlementId, paymentId])
+  @@index([paymentId])
+  @@map("settlement_items")
+}
+
+// ----------------------------------------------------------------------------
+// Caja y gastos
+// ----------------------------------------------------------------------------
+
+model CashSession {
+  id                  String            @id @default(uuid()) @db.Uuid
+  merchantId          String            @db.Uuid
+  branchId            String            @db.Uuid
+  status              CashSessionStatus @default(OPEN)
+  openedByUserId      String            @db.Uuid
+  openedAt            DateTime          @default(now())
+  openingAmountMinor  BigInt            @default(0)
+  closedByUserId      String?           @db.Uuid
+  closedAt            DateTime?
+  closingAmountMinor  BigInt?
+  expectedAmountMinor BigInt?
+  differenceMinor     BigInt?
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  merchant  Merchant       @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  branch    Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  openedBy  User           @relation("CashSessionOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
+  closedBy  User?          @relation("CashSessionClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  movements CashMovement[]
+  expenses  Expense[]
+
+  // Índice único parcial (solo una sesión OPEN por sucursal) en la migración SQL.
+  @@index([merchantId, branchId, status])
+  @@index([branchId, openedAt])
+  @@map("cash_sessions")
+}
+
+model CashMovement {
+  id              String           @id @default(uuid()) @db.Uuid
+  merchantId      String           @db.Uuid
+  branchId        String           @db.Uuid
+  sessionId       String           @db.Uuid
+  type            CashMovementType
+  direction       CashDirection
+  amountMinor     BigInt
+  referenceType   String?
+  referenceId     String?
+  description     String?
+  createdByUserId String?          @db.Uuid
+  createdAt       DateTime         @default(now())
+
+  merchant  Merchant    @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  branch    Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  session   CashSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  createdBy User?       @relation("CashMovementCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([merchantId, createdAt])
+  @@map("cash_movements")
+}
+
+model Expense {
+  id              String   @id @default(uuid()) @db.Uuid
+  merchantId      String   @db.Uuid
+  branchId        String   @db.Uuid
+  sessionId       String?  @db.Uuid
+  category        String
+  amountMinor     BigInt
+  currency        String   @default("COP") @db.Char(3)
+  description     String?
+  incurredAt      DateTime
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  merchant  Merchant     @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  branch    Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  session   CashSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  createdBy User         @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([merchantId, incurredAt])
+  @@index([sessionId])
+  @@map("expenses")
+}

@@ -1,0 +1,46 @@
+{
+  "name": "postai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PostAi — Plataforma POS + SoftPOS para Android",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,admin -c blue,green \"npm:dev:api\" \"npm:dev:admin\"",
+    "dev:api": "npm run dev --workspace @postai/api",
+    "dev:admin": "npm run dev --workspace @postai/admin",
+    "build": "npm run build --workspace @postai/api && npm run build --workspace @postai/admin",
+    "typecheck": "npm run typecheck --workspace @postai/api && npm run typecheck --workspace @postai/admin",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspace @postai/api",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:generate": "npm run db:generate --workspace @postai/api",
+    "db:migrate": "npm run db:migrate --workspace @postai/api",
+    "db:studio": "npm run db:studio --workspace @postai/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.2": true,
+    "prisma@6.19.3": true
+  }
+}

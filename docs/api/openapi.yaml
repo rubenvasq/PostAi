@@ -1,0 +1,2882 @@
+openapi: 3.0.3
+info:
+  title: PostAi API
+  version: 0.1.0
+  description: |
+    Contrato del MVP de **PostAi** (repositorio `postai`), del **Equipo PostAi**:
+    la plataforma POS + SoftPOS para Android.
+
+    Alcance actual: efectivo, transferencia y tarjeta simulada. La integración
+    SoftPOS real (`CARD_SOFTPOS`) responde `501` hasta completar `ARQ-004` y
+    disponer de la documentación del proveedor.
+
+    Convenciones:
+    - Dinero como string en pesos enteros COP: `"10000"`.
+    - Fechas ISO 8601 en UTC.
+    - Autenticación Bearer + cabecera `X-Merchant-Id`.
+    - `Idempotency-Key` en ventas, pagos y reembolsos.
+  contact:
+    name: Equipo PostAi
+  license:
+    name: Uso privado
+    url: https://postai.invalid/license
+servers:
+  - url: http://127.0.0.1:3000
+    description: Desarrollo local
+  - url: https://api.postai.invalid
+    description: Producción (URL definitiva pendiente de confirmar)
+
+tags:
+  - name: Sistema
+    description: Salud del servicio.
+  - name: Autenticación
+    description: Registro, login y sesiones.
+  - name: Comercio
+    description: Datos del comercio y sucursales.
+  - name: Catálogo
+    description: Categorías, productos, impuestos y métodos de pago.
+  - name: Clientes
+    description: Clientes del comercio.
+  - name: Inventario
+    description: Stock y movimientos.
+  - name: Ventas
+    description: Ventas, anulación y comprobantes.
+  - name: Pagos
+    description: Pagos y reembolsos.
+  - name: Caja
+    description: Sesiones, movimientos y gastos.
+  - name: Reportes
+    description: Dashboard y reportes básicos.
+  - name: Administración
+    description: Empleados, roles y auditoría.
+
+security:
+  - bearerAuth: []
+    merchantHeader: []
+
+paths:
+  /health:
+    get:
+      tags: [Sistema]
+      summary: Estado del servicio
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: 0.1.0
+        '429':
+          description: Demasiadas solicitudes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registrar usuario y comercio
+      description: |
+        Crea el usuario, el comercio, la sucursal `MAIN`, los roles base y la
+        membresía del propietario. Devuelve tokens de acceso.
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuario y comercio creados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/auth/refresh:
+    post:
+      tags: [Autenticación]
+      summary: Renovar tokens
+      operationId: refresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens renovados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/auth/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión
+      description: Revoca el refresh token indicado.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Sesión revocada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Usuario actual y comercios
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Datos del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/merchant:
+    get:
+      tags: [Comercio]
+      summary: Obtener comercio actual
+      operationId: getMerchant
+      responses:
+        '200':
+          description: Comercio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Merchant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Comercio]
+      summary: Actualizar comercio
+      description: La moneda no se puede cambiar en el MVP.
+      operationId: updateMerchant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantUpdateRequest'
+      responses:
+        '200':
+          description: Comercio actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Merchant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/branches:
+    get:
+      tags: [Comercio]
+      summary: Listar sucursales
+      operationId: listBranches
+      responses:
+        '200':
+          description: Sucursales del comercio
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Branch'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/categories:
+    get:
+      tags: [Catálogo]
+      summary: Listar categorías
+      operationId: listCategories
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Categorías
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Catálogo]
+      summary: Crear categoría
+      operationId: createCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreateRequest'
+      responses:
+        '201':
+          description: Categoría creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryId'
+    patch:
+      tags: [Catálogo]
+      summary: Actualizar categoría
+      operationId: updateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateRequest'
+      responses:
+        '200':
+          description: Categoría actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    delete:
+      tags: [Catálogo]
+      summary: Desactivar categoría
+      description: Desactiva la categoría; no borra el registro.
+      operationId: deleteCategory
+      responses:
+        '204':
+          description: Categoría desactivada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/products:
+    get:
+      tags: [Catálogo]
+      summary: Listar productos
+      operationId: listProducts
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Productos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Catálogo]
+      summary: Crear producto
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/products/{productId}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      tags: [Catálogo]
+      summary: Obtener producto
+      operationId: getProduct
+      responses:
+        '200':
+          description: Producto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Catálogo]
+      summary: Actualizar producto
+      operationId: updateProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    delete:
+      tags: [Catálogo]
+      summary: Desactivar producto
+      description: Desactiva el producto; no borra el registro.
+      operationId: deleteProduct
+      responses:
+        '204':
+          description: Producto desactivado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/tax-rates:
+    get:
+      tags: [Catálogo]
+      summary: Listar impuestos
+      operationId: listTaxRates
+      responses:
+        '200':
+          description: Impuestos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaxRate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Catálogo]
+      summary: Crear impuesto
+      operationId: createTaxRate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxRateRequest'
+      responses:
+        '201':
+          description: Impuesto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxRate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/payment-methods:
+    get:
+      tags: [Catálogo]
+      summary: Listar métodos de pago habilitados
+      operationId: listPaymentMethods
+      responses:
+        '200':
+          description: Métodos de pago
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentMethod'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/customers:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes
+      operationId: listCustomers
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Clientes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Clientes]
+      summary: Crear cliente
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreateRequest'
+      responses:
+        '201':
+          description: Cliente creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/customers/{customerId}:
+    parameters:
+      - $ref: '#/components/parameters/CustomerId'
+    get:
+      tags: [Clientes]
+      summary: Obtener cliente
+      operationId: getCustomer
+      responses:
+        '200':
+          description: Cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Clientes]
+      summary: Actualizar cliente
+      operationId: updateCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdateRequest'
+      responses:
+        '200':
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/inventory:
+    get:
+      tags: [Inventario]
+      summary: Listar stock
+      operationId: listInventory
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: lowStock
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Stock por producto
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryItem'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/inventory/{productId}/adjustments:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    post:
+      tags: [Inventario]
+      summary: Ajustar inventario
+      description: Registra un movimiento de ajuste y actualiza el stock.
+      operationId: adjustInventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentRequest'
+      responses:
+        '201':
+          description: Movimiento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/inventory/movements:
+    get:
+      tags: [Inventario]
+      summary: Historial de movimientos
+      operationId: listInventoryMovements
+      parameters:
+        - name: productId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Movimientos de inventario
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryMovement'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/sales:
+    get:
+      tags: [Ventas]
+      summary: Listar ventas
+      operationId: listSales
+      parameters:
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SaleStatus'
+        - name: customerId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Ventas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Sale'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Ventas]
+      summary: Crear venta
+      description: |
+        El backend calcula precios, impuestos y totales desde el catálogo.
+        Requiere `Idempotency-Key`. La venta se crea en `DRAFT`; pasa a
+        `PENDING_PAYMENT` al iniciar el cobro o a `PAID` cuando el pago se
+        aprueba.
+      operationId: createSale
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleCreateRequest'
+      responses:
+        '201':
+          description: Venta creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/sales/{saleId}:
+    parameters:
+      - $ref: '#/components/parameters/SaleId'
+    get:
+      tags: [Ventas]
+      summary: Obtener venta
+      operationId: getSale
+      responses:
+        '200':
+          description: Venta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/sales/{saleId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/SaleId'
+    post:
+      tags: [Ventas]
+      summary: Anular venta sin pago
+      description: Solo para ventas en `DRAFT` o `PENDING_PAYMENT` sin pagos aprobados.
+      operationId: cancelSale
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Venta anulada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/sales/{saleId}/receipt:
+    parameters:
+      - $ref: '#/components/parameters/SaleId'
+    get:
+      tags: [Ventas]
+      summary: Obtener comprobante
+      description: Comprobante interno no fiscal, apto para compartir desde la app.
+      operationId: getSaleReceipt
+      responses:
+        '200':
+          description: Comprobante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /v1/sales/{saleId}/payments:
+    parameters:
+      - $ref: '#/components/parameters/SaleId'
+    get:
+      tags: [Pagos]
+      summary: Listar pagos de la venta
+      operationId: listSalePayments
+      responses:
+        '200':
+          description: Pagos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Pagos]
+      summary: Registrar pago
+      description: |
+        - `CASH` y `TRANSFER` se registran como `APPROVED`.
+        - `CARD_SIMULATED` se aprueba y se marca como simulado.
+        - `CARD_SOFTPOS` responde `501` hasta `ARQ-004`.
+        - En el MVP se permite un solo pago por venta.
+      operationId: createPayment
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+      responses:
+        '201':
+          description: Pago registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/payments/{paymentId}:
+    parameters:
+      - $ref: '#/components/parameters/PaymentId'
+    get:
+      tags: [Pagos]
+      summary: Obtener pago
+      operationId: getPayment
+      responses:
+        '200':
+          description: Pago
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/payments/{paymentId}/refunds:
+    parameters:
+      - $ref: '#/components/parameters/PaymentId'
+    get:
+      tags: [Pagos]
+      summary: Listar reembolsos del pago
+      operationId: listRefunds
+      responses:
+        '200':
+          description: Reembolsos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Refund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Pagos]
+      summary: Reembolsar pago
+      description: |
+        En el MVP solo se permiten reembolsos **totales** y de métodos
+        registrados sin proveedor (efectivo, transferencia o simulado). Para
+        SoftPOS real responde `501` hasta confirmar soporte del proveedor.
+      operationId: createRefund
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+      responses:
+        '201':
+          description: Reembolso registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/cash/sessions/current:
+    get:
+      tags: [Caja]
+      summary: Sesión de caja abierta
+      operationId: getCurrentCashSession
+      responses:
+        '200':
+          description: Sesión abierta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/cash/sessions:
+    get:
+      tags: [Caja]
+      summary: Historial de cajas
+      operationId: listCashSessions
+      parameters:
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Sesiones de caja
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CashSession'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Caja]
+      summary: Abrir caja
+      operationId: openCashSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashOpenRequest'
+      responses:
+        '201':
+          description: Caja abierta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/cash/sessions/{sessionId}/close:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      tags: [Caja]
+      summary: Cerrar caja
+      operationId: closeCashSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashCloseRequest'
+      responses:
+        '200':
+          description: Caja cerrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/cash/sessions/{sessionId}/movements:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [Caja]
+      summary: Listar movimientos de caja
+      operationId: listCashMovements
+      responses:
+        '200':
+          description: Movimientos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CashMovement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Caja]
+      summary: Registrar movimiento de caja
+      operationId: createCashMovement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashMovementRequest'
+      responses:
+        '201':
+          description: Movimiento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/expenses:
+    get:
+      tags: [Caja]
+      summary: Listar gastos
+      operationId: listExpenses
+      parameters:
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Gastos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Expense'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Caja]
+      summary: Registrar gasto
+      operationId: createExpense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+      responses:
+        '201':
+          description: Gasto registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/dashboard/summary:
+    get:
+      tags: [Reportes]
+      summary: Resumen del dashboard
+      operationId: getDashboardSummary
+      parameters:
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+      responses:
+        '200':
+          description: Resumen del periodo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/reports/sales:
+    get:
+      tags: [Reportes]
+      summary: Reporte de ventas
+      operationId: getSalesReport
+      parameters:
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - name: groupBy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [day, payment_method, employee]
+            default: day
+      responses:
+        '200':
+          description: Reporte agrupado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/users:
+    get:
+      tags: [Administración]
+      summary: Listar empleados
+      operationId: listUsers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Empleados del comercio
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Administración]
+      summary: Crear empleado
+      description: Crea el usuario y su membresía con el rol indicado.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '201':
+          description: Empleado creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Administración]
+      summary: Actualizar empleado
+      operationId: updateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Empleado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/roles:
+    get:
+      tags: [Administración]
+      summary: Listar roles y permisos
+      operationId: listRoles
+      responses:
+        '200':
+          description: Roles del comercio
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/audit-logs:
+    get:
+      tags: [Administración]
+      summary: Listar auditoría
+      operationId: listAuditLogs
+      parameters:
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Registros de auditoría
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLog'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    merchantHeader:
+      type: apiKey
+      in: header
+      name: X-Merchant-Id
+      description: UUID del comercio activo. El usuario debe tener membresía.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    FromQuery:
+      name: from
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    ToQuery:
+      name: to
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID generado por el cliente y reutilizado en reintentos.
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CustomerId:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SaleId:
+      name: saleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Petición mal formada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Sin permiso o sin membresía en el comercio
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflicto de estado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: Regla de negocio o validación semántica
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotImplemented:
+      description: Función aún no disponible (SoftPOS real)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: El importe debe ser mayor que cero.
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            requestId:
+              type: string
+
+    Money:
+      type: string
+      pattern: '^[0-9]+$'
+      description: Importe en pesos enteros COP.
+      example: '10000'
+
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 42
+        totalPages:
+          type: integer
+          example: 3
+
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Segundos de vida del access token.
+          example: 900
+
+    User:
+      type: object
+      required: [id, email, fullName, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, DISABLED]
+        createdAt:
+          type: string
+          format: date-time
+
+    RoleSummary:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: CASHIER
+        name:
+          type: string
+          example: Cajero
+
+    Membership:
+      type: object
+      required: [merchantId, merchantName, role, status]
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        merchantName:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleSummary'
+        status:
+          type: string
+          enum: [ACTIVE, INVITED, SUSPENDED]
+
+    Merchant:
+      type: object
+      required: [id, name, currency, timezone, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        legalName:
+          type: string
+          nullable: true
+        taxId:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          example: COP
+        timezone:
+          type: string
+          example: America/Bogota
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, CLOSED]
+        createdAt:
+          type: string
+          format: date-time
+
+    Branch:
+      type: object
+      required: [id, code, name, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: MAIN
+        name:
+          type: string
+        address:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    Category:
+      type: object
+      required: [id, name, sortOrder, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    Product:
+      type: object
+      required: [id, type, name, price, currency, trackInventory, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [PRODUCT, SERVICE]
+        name:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        barcode:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        taxRateId:
+          type: string
+          format: uuid
+          nullable: true
+        price:
+          $ref: '#/components/schemas/Money'
+        currency:
+          type: string
+          example: COP
+        trackInventory:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TaxRate:
+      type: object
+      required: [id, name, rateBp, isDefault, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: IVA 19%
+        rateBp:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          example: 1900
+        isDefault:
+          type: boolean
+        isActive:
+          type: boolean
+
+    PaymentMethod:
+      type: object
+      required: [id, code, name, type, isSimulated, requiresProvider, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: CARD_SIMULATED
+        name:
+          type: string
+        type:
+          type: string
+          enum: [CASH, TRANSFER, CARD_SOFTPOS, CARD_SIMULATED, OTHER]
+        isSimulated:
+          type: boolean
+        requiresProvider:
+          type: boolean
+        isActive:
+          type: boolean
+
+    Customer:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        taxId:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    InventoryItem:
+      type: object
+      required: [productId, productName, quantity, updatedAt]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+          format: double
+          example: 12.5
+        lowStockThreshold:
+          type: number
+          format: double
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    InventoryMovement:
+      type: object
+      required: [id, productId, type, quantityDelta, previousQuantity, newQuantity, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [INITIAL, PURCHASE, SALE, RETURN, ADJUSTMENT, LOSS]
+        quantityDelta:
+          type: number
+          format: double
+        previousQuantity:
+          type: number
+          format: double
+        newQuantity:
+          type: number
+          format: double
+        referenceType:
+          type: string
+          nullable: true
+        referenceId:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        createdByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SaleStatus:
+      type: string
+      enum: [DRAFT, PENDING_PAYMENT, PAID, PARTIALLY_REFUNDED, REFUNDED, CANCELLED]
+
+    PaymentStatus:
+      type: string
+      enum: [CREATED, PENDING, PROCESSING, APPROVED, REJECTED, CANCELLED, PARTIALLY_REFUNDED, REFUNDED]
+
+    SaleItem:
+      type: object
+      required: [id, productId, productName, quantity, unitPrice, discount, taxRateBp, tax, lineTotal]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
+        productName:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+          format: double
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        discount:
+          $ref: '#/components/schemas/Money'
+        taxRateBp:
+          type: integer
+        tax:
+          $ref: '#/components/schemas/Money'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+
+    Sale:
+      type: object
+      required: [id, status, currency, subtotal, discount, tax, total, refunded, branchId, sellerUserId, items, payments, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SaleStatus'
+        currency:
+          type: string
+          example: COP
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        discount:
+          $ref: '#/components/schemas/Money'
+        tax:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        refunded:
+          $ref: '#/components/schemas/Money'
+        receiptNumber:
+          type: string
+          nullable: true
+        branchId:
+          type: string
+          format: uuid
+        sellerUserId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaleItem'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Payment:
+      type: object
+      required: [id, saleId, methodCode, status, amount, currency, isSimulated, refunded, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        saleId:
+          type: string
+          format: uuid
+        methodCode:
+          type: string
+          example: CASH
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          type: string
+          example: COP
+        isSimulated:
+          type: boolean
+        providerPaymentId:
+          type: string
+          nullable: true
+        failureCode:
+          type: string
+          nullable: true
+        failureMessage:
+          type: string
+          nullable: true
+        refunded:
+          $ref: '#/components/schemas/Money'
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Refund:
+      type: object
+      required: [id, paymentId, status, amount, currency, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CREATED, PENDING, PROCESSING, APPROVED, REJECTED, CANCELLED]
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          type: string
+          example: COP
+        reason:
+          type: string
+          nullable: true
+        providerRefundId:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Receipt:
+      type: object
+      required: [saleId, receiptNumber, issuedAt, merchant, branch, items, totals, payments, simulated]
+      properties:
+        saleId:
+          type: string
+          format: uuid
+        receiptNumber:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+        merchant:
+          type: object
+          properties:
+            name:
+              type: string
+            legalName:
+              type: string
+              nullable: true
+            taxId:
+              type: string
+              nullable: true
+        branch:
+          type: object
+          properties:
+            name:
+              type: string
+            address:
+              type: string
+              nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaleItem'
+        totals:
+          type: object
+          properties:
+            subtotal:
+              $ref: '#/components/schemas/Money'
+            discount:
+              $ref: '#/components/schemas/Money'
+            tax:
+              $ref: '#/components/schemas/Money'
+            total:
+              $ref: '#/components/schemas/Money'
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              methodCode:
+                type: string
+              amount:
+                $ref: '#/components/schemas/Money'
+              isSimulated:
+                type: boolean
+        simulated:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+
+    CashSession:
+      type: object
+      required: [id, branchId, status, openedByUserId, openedAt, openingAmount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [OPEN, CLOSED]
+        openedByUserId:
+          type: string
+          format: uuid
+        openedAt:
+          type: string
+          format: date-time
+        openingAmount:
+          $ref: '#/components/schemas/Money'
+        closedByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closingAmount:
+          $ref: '#/components/schemas/Money'
+        expectedAmount:
+          $ref: '#/components/schemas/Money'
+        difference:
+          type: string
+          description: Puede ser negativo.
+          example: '-500'
+        notes:
+          type: string
+          nullable: true
+
+    CashMovement:
+      type: object
+      required: [id, sessionId, type, direction, amount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [OPENING, SALE, REFUND, EXPENSE, WITHDRAWAL, DEPOSIT, ADJUSTMENT, CLOSING]
+        direction:
+          type: string
+          enum: [IN, OUT]
+        amount:
+          $ref: '#/components/schemas/Money'
+        referenceType:
+          type: string
+          nullable: true
+        referenceId:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Expense:
+      type: object
+      required: [id, branchId, category, amount, currency, incurredAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+          nullable: true
+        category:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          type: string
+          example: COP
+        description:
+          type: string
+          nullable: true
+        incurredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    DashboardSummary:
+      type: object
+      required: [from, to, currency, salesCount, grossSales, refunds, netSales, averageTicket, byMethod, lowStockCount]
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        currency:
+          type: string
+          example: COP
+        salesCount:
+          type: integer
+        grossSales:
+          $ref: '#/components/schemas/Money'
+        refunds:
+          $ref: '#/components/schemas/Money'
+        netSales:
+          $ref: '#/components/schemas/Money'
+        averageTicket:
+          $ref: '#/components/schemas/Money'
+        byMethod:
+          type: array
+          items:
+            type: object
+            properties:
+              methodCode:
+                type: string
+              count:
+                type: integer
+              amount:
+                $ref: '#/components/schemas/Money'
+        lowStockCount:
+          type: integer
+        openCashSession:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            openedAt:
+              type: string
+              format: date-time
+            openingAmount:
+              $ref: '#/components/schemas/Money'
+
+    SalesReport:
+      type: object
+      required: [groupBy, from, to, rows]
+      properties:
+        groupBy:
+          type: string
+          enum: [day, payment_method, employee]
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              salesCount:
+                type: integer
+              grossSales:
+                $ref: '#/components/schemas/Money'
+              refunds:
+                $ref: '#/components/schemas/Money'
+              netSales:
+                $ref: '#/components/schemas/Money'
+
+    Member:
+      type: object
+      required: [userId, email, fullName, role, status, createdAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleSummary'
+        status:
+          type: string
+          enum: [ACTIVE, INVITED, SUSPENDED]
+        createdAt:
+          type: string
+          format: date-time
+
+    Permission:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          example: sales.create
+        description:
+          type: string
+          nullable: true
+
+    Role:
+      type: object
+      required: [id, code, name, isSystem, permissions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: CASHIER
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isSystem:
+          type: boolean
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+
+    AuditLog:
+      type: object
+      required: [id, action, entityType, entityId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+          example: sale.cancelled
+        entityType:
+          type: string
+          example: Sale
+        entityId:
+          type: string
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required: [email, password, fullName, merchantName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        fullName:
+          type: string
+        merchantName:
+          type: string
+        merchantLegalName:
+          type: string
+        merchantTaxId:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    LogoutRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user, merchant, membership, tokens]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        merchant:
+          $ref: '#/components/schemas/Merchant'
+        membership:
+          $ref: '#/components/schemas/Membership'
+        tokens:
+          $ref: '#/components/schemas/AuthTokens'
+
+    LoginResponse:
+      type: object
+      required: [user, memberships, tokens]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Membership'
+        tokens:
+          $ref: '#/components/schemas/AuthTokens'
+
+    MeResponse:
+      type: object
+      required: [user, memberships]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Membership'
+
+    MerchantUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        legalName:
+          type: string
+        taxId:
+          type: string
+        timezone:
+          type: string
+
+    CategoryCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    CategoryUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    ProductCreateRequest:
+      type: object
+      required: [name, price]
+      properties:
+        type:
+          type: string
+          enum: [PRODUCT, SERVICE]
+          default: PRODUCT
+        name:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        taxRateId:
+          type: string
+          format: uuid
+        price:
+          $ref: '#/components/schemas/Money'
+        trackInventory:
+          type: boolean
+          default: true
+        isActive:
+          type: boolean
+          default: true
+
+    ProductUpdateRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [PRODUCT, SERVICE]
+        name:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        taxRateId:
+          type: string
+          format: uuid
+          nullable: true
+        price:
+          $ref: '#/components/schemas/Money'
+        trackInventory:
+          type: boolean
+        isActive:
+          type: boolean
+
+    TaxRateRequest:
+      type: object
+      required: [name, rateBp]
+      properties:
+        name:
+          type: string
+        rateBp:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        isDefault:
+          type: boolean
+        isActive:
+          type: boolean
+
+    CustomerCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        taxId:
+          type: string
+        notes:
+          type: string
+
+    CustomerUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        taxId:
+          type: string
+        notes:
+          type: string
+
+    InventoryAdjustmentRequest:
+      type: object
+      required: [quantityDelta, reason]
+      properties:
+        quantityDelta:
+          type: number
+          format: double
+          description: Positivo para entrada, negativo para salida.
+        reason:
+          type: string
+
+    SaleItemInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          format: double
+          minimum: 0.001
+
+    DiscountInput:
+      type: object
+      required: [type]
+      description: Si `type=PERCENT` se requiere `percentBp`; si `type=AMOUNT` se requiere `amount`.
+      properties:
+        type:
+          type: string
+          enum: [PERCENT, AMOUNT]
+        percentBp:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        amount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          type: string
+
+    SaleCreateRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SaleItemInput'
+        customerId:
+          type: string
+          format: uuid
+        discount:
+          $ref: '#/components/schemas/DiscountInput'
+        notes:
+          type: string
+
+    PaymentCreateRequest:
+      type: object
+      required: [methodCode, amount]
+      description: El importe debe cubrir el total pendiente de la venta. En el MVP se permite un solo pago por venta.
+      properties:
+        methodCode:
+          type: string
+          enum: [CASH, TRANSFER, CARD_SIMULATED, CARD_SOFTPOS]
+        amount:
+          $ref: '#/components/schemas/Money'
+        notes:
+          type: string
+
+    RefundCreateRequest:
+      type: object
+      required: [amount]
+      description: En el MVP el importe debe ser igual al total del pago (reembolso total).
+      properties:
+        amount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          type: string
+
+    CashOpenRequest:
+      type: object
+      required: [openingAmount]
+      properties:
+        openingAmount:
+          $ref: '#/components/schemas/Money'
+        notes:
+          type: string
+
+    CashCloseRequest:
+      type: object
+      required: [closingAmount]
+      properties:
+        closingAmount:
+          $ref: '#/components/schemas/Money'
+        notes:
+          type: string
+
+    CashMovementRequest:
+      type: object
+      required: [type, direction, amount]
+      description: El importe siempre es positivo; `direction` indica entrada o salida.
+      properties:
+        type:
+          type: string
+          enum: [DEPOSIT, WITHDRAWAL, ADJUSTMENT]
+        direction:
+          type: string
+          enum: [IN, OUT]
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+
+    ExpenseRequest:
+      type: object
+      required: [category, amount]
+      properties:
+        category:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+        incurredAt:
+          type: string
+          format: date-time
+        sessionId:
+          type: string
+          format: uuid
+
+    UserCreateRequest:
+      type: object
+      required: [email, fullName, password, roleCode]
+      properties:
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        roleCode:
+          type: string
+          example: CASHIER
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        roleCode:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INVITED, SUSPENDED]

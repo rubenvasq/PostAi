@@ -1,0 +1,23 @@
+name: postai
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: postai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postai
+      POSTGRES_PASSWORD: postai
+      POSTGRES_DB: postai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postai-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postai -d postai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postai-db-data:
