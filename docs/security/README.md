@@ -14,7 +14,7 @@
 ## Requisitos
 
 - Autenticación segura y gestión de tokens.
-- Autorización por roles y permisos.
+- Autorización por membresía activa al comercio; sin roles de empleado en el MVP.
 - Validación de entradas en el backend.
 - Rate limiting donde corresponda.
 - Auditoría de acciones relevantes.

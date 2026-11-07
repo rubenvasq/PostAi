@@ -172,7 +172,6 @@ model Merchant {
 
   branches           Branch[]
   memberships        Membership[]
-  roles              Role[]
   categories         Category[]
   products           Product[]
   taxRates           TaxRate[]
@@ -247,67 +246,29 @@ model Membership {
   id         String           @id @default(uuid()) @db.Uuid
   userId     String           @db.Uuid
   merchantId String           @db.Uuid
-  roleId     String           @db.Uuid
   status     MembershipStatus @default(ACTIVE)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  role     Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
   @@unique([userId, merchantId])
   @@index([merchantId])
-  @@index([roleId])
   @@map("memberships")
 }
 
-model Role {
-  id          String   @id @default(uuid()) @db.Uuid
-  merchantId  String   @db.Uuid
-  name        String
-  code        String
-  description String?
-  isSystem    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  merchant    Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  memberships Membership[]
-  permissions RolePermission[]
-
-  @@unique([merchantId, code])
-  @@index([merchantId])
-  @@map("roles")
-}
-
-model Permission {
-  id          String           @id @default(uuid()) @db.Uuid
-  code        String           @unique
-  description String?
-  roles       RolePermission[]
-
-  @@map("permissions")
-}
-
-model RolePermission {
-  roleId       String @db.Uuid
-  permissionId String @db.Uuid
-
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-  @@map("role_permissions")
-}
-
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  deviceName String?
+  userAgent  String?
+  ipAddress  String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -640,6 +601,7 @@ model Payment {
   providerPaymentId String?
   failureCode       String?
   failureMessage    String?
+  notes             String?
   approvedAt        DateTime?
   cancelledAt       DateTime?
   refundedMinor     BigInt        @default(0)

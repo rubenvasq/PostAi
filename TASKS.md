@@ -35,19 +35,8 @@ _(nada por ahora)_
 
 | ID | Tarea | Estado | Depende de |
 | --- | --- | --- | --- |
-| MVP-001 | Autenticación y registro | Pendiente | INF-002, INF-004 |
-| MVP-002 | Comercio y configuración básica | Pendiente | MVP-001 |
-| MVP-003 | Productos, servicios y categorías | Pendiente | MVP-002 |
 | MVP-004 | Carrito y checkout | Pendiente | MVP-003 |
-| MVP-005 | Registro de ventas | Pendiente | MVP-004 |
-| MVP-006 | Pagos simulados (efectivo/transferencia y tarjeta sandbox) | Pendiente | MVP-005 |
-| MVP-007 | Historial, detalle de venta y comprobantes | Pendiente | MVP-005 |
-| MVP-008 | Clientes básicos | Pendiente | MVP-002 |
-| MVP-009 | Inventario básico | Pendiente | MVP-003 |
-| MVP-010 | Empleados, roles y permisos básicos | Pendiente | MVP-002 |
-| MVP-011 | Dashboard con indicadores esenciales | Pendiente | MVP-005 |
 | MVP-012 | Panel web administrativo básico | Pendiente | MVP-002 |
-| MVP-013 | Auditoría de operaciones relevantes | Pendiente | MVP-001 |
 
 ### Integración SoftPOS
 
@@ -82,17 +71,80 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | INF-005 | Docker Compose y variables de entorno | 2026-11-06 |
 | INF-006 | Lint, formato, typecheck y pruebas | 2026-11-06 |
 | INF-007 | CI con GitHub Actions | 2026-11-06 |
+| MVP-001 | Autenticación y registro (backend) | 2026-11-06 |
+| ADR-004 | Autenticación y sesiones del backend | 2026-11-06 |
+| MVP-002 | Comercio y configuración básica (backend): `GET/PATCH /v1/merchant`, `GET /v1/branches`, contexto `X-Merchant-Id` | 2026-11-06 |
+| MVP-003 | Catálogo (backend): categorías, impuestos y productos con paginación, autorización por membresía y aislamiento por comercio | 2026-11-06 |
+| MVP-008 | Clientes básicos (backend): `GET/POST /v1/customers`, `GET/PATCH /v1/customers/{customerId}`, búsqueda, paginación y aislamiento por comercio | 2026-11-06 |
+| MVP-009 | Inventario básico (backend): `GET /v1/inventory`, `POST /v1/inventory/{productId}/adjustments` y `GET /v1/inventory/movements` con sucursal `MAIN`, stock no negativo y aislamiento por comercio (`ADR-005`) | 2026-11-06 |
+| ADR-006 | Modelo de terminal sin roles de empleado; autorización por membresía activa | 2026-11-06 |
+| MVP-005 | Registro de ventas (backend): `POST/GET /v1/sales`, `GET /v1/sales/{saleId}`, anulación e idempotencia con cálculo en servidor (`ADR-007`) | 2026-11-06 |
+| MVP-006 | Pagos simulados (backend): `GET /v1/payment-methods`, `POST/GET /v1/sales/{saleId}/payments`, `GET /v1/payments/{paymentId}`, descuento de inventario transaccional (`ADR-007`) | 2026-11-06 |
+| ADR-007 | Ventas y pagos simulados del MVP | 2026-11-06 |
+| MVP-007 | Historial, detalle y comprobante (backend): `GET /v1/sales/{saleId}/receipt` con número de comprobante legible secuencial por comercio | 2026-11-06 |
+| MVP-011 | Dashboard e indicadores (backend): `GET /v1/dashboard/summary` y `GET /v1/reports/sales` (agregación por backend, zona `America/Bogota`, aislado por comercio) | 2026-11-06 |
+| MVP-013 | Auditoría (backend): `GET /v1/audit-logs` con filtros y paginación; registro best-effort de `sale.created`, `sale.cancelled` y `payment.approved` con autor y metadatos | 2026-11-06 |
+| MVP-010 | Terminales y sesiones por dispositivo (backend): `GET /v1/auth/sessions` y `DELETE /v1/auth/sessions/{sessionId}`; cada refresh token guarda `deviceName` (`X-Device-Name`), `userAgent`, `ipAddress` y `lastUsedAt`, aislado por usuario | 2026-11-07 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
-> no se aplicó porque el daemon de Docker no estaba disponible en el entorno.
+> `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
+> registro, login, refresh, logout y `me` fue verificado.
 > El repositorio está publicado en
 > [`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi) y el CI de `INF-007`
 > se ejecutó correctamente sobre `main`.
 
+### Criterios cumplidos de `MVP-001`
+
+- [x] `POST /v1/auth/register` crea usuario, comercio, sucursal `MAIN` y membresía en una transacción, sin roles (`ADR-006`).
+- [x] `POST /v1/auth/login` valida credenciales y devuelve tokens y membresías.
+- [x] `POST /v1/auth/refresh` rota el refresh token y rechaza tokens revocados o expirados.
+- [x] `POST /v1/auth/logout` revoca el refresh token y responde `204`.
+- [x] `GET /v1/auth/me` devuelve usuario y membresías con bearer token.
+- [x] Contraseñas con bcrypt; refresh tokens guardados solo como hash; access token JWT de corta vida.
+- [x] Errores con el formato del contrato.
+- [x] Pruebas automáticas y CI en verde.
+
+### Criterios cumplidos de `MVP-008`
+
+- [x] `GET /v1/customers` lista clientes del comercio con `search`, `page` y `pageSize`, sin filtrar datos de otros comercios.
+- [x] `POST /v1/customers` crea un cliente con `name` obligatorio y `email`, `phone`, `taxId` y `notes` opcionales; normaliza y valida el correo.
+- [x] `GET /v1/customers/{customerId}` devuelve el cliente o `404` si no pertenece al comercio.
+- [x] `PATCH /v1/customers/{customerId}` actualiza campos parciales y permite limpiar opcionales con `null`.
+- [x] Pueden leer y escribir cualquier miembro activo; sin roles de empleado (`ADR-006`).
+- [x] Errores con el formato del contrato y entradas validadas con Zod.
+- [x] Pruebas automáticas en verde (36 pruebas) y flujo real verificado contra PostgreSQL, incluido el aislamiento entre comercios.
+
+### Criterios cumplidos de `MVP-009`
+
+- [x] `GET /v1/inventory` lista productos inventariables con `search`, `lowStock`, `page` y `pageSize`, aislando por comercio.
+- [x] `POST /v1/inventory/{productId}/adjustments` registra un movimiento `ADJUSTMENT` y actualiza el stock de forma transaccional.
+- [x] `GET /v1/inventory/movements` lista movimientos con filtros `productId`, `from`, `to`, paginación y aislamiento.
+- [x] No se permite stock negativo; un ajuste inválido responde `422`.
+- [x] Los servicios y productos sin control de inventario se rechazan en ajustes y no aparecen en el listado.
+- [x] Lectura y ajustes para cualquier miembro activo; sin roles de empleado (`ADR-006`).
+- [x] Errores con el formato del contrato y entradas validadas con Zod.
+- [x] Pruebas automáticas en verde (47 pruebas) y flujo real verificado contra PostgreSQL, incluido el aislamiento entre comercios.
+
+### Criterios cumplidos de `MVP-010`
+
+- [x] `GET /v1/auth/sessions` lista las sesiones activas (refresh tokens vigentes)
+      de la cuenta con `deviceName`, `userAgent`, `ipAddress`, `createdAt`,
+      `lastUsedAt` y `expiresAt`, ordenadas por último uso.
+- [x] `DELETE /v1/auth/sessions/{sessionId}` revoca una sesión propia e invalida
+      su refresh token; responde `404` si no existe o no pertenece al usuario.
+- [x] `register`, `login` y `refresh` capturan el dispositivo desde el encabezado
+      `X-Device-Name`, el `User-Agent` y la IP; el refresh conserva la identidad
+      del dispositivo al rotar.
+- [x] Aislamiento por usuario: nadie puede listar ni revocar sesiones ajenas.
+- [x] Migración `20261107052000_add_device_sessions` (aditiva) lista para aplicar.
+- [x] Pruebas automáticas en verde (88 pruebas) y OpenAPI validado.
+
 ## Próxima acción recomendada
 
-1. Implementar autenticación y registro (`MVP-001`) en el backend; la parte
-   móvil queda bloqueada hasta `ARQ-001`.
+1. Aplicar la migración `20261107052000_add_device_sessions` contra PostgreSQL
+   (requiere `docker compose up` y `DATABASE_URL`) y verificar el flujo real de
+   sesiones por dispositivo.
 2. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
    en Colombia y registrar hallazgos verificados en `docs/providers/`.
-3. Aplicar la migración inicial cuando Docker esté disponible.
+3. Añadir rate limiting en login/refresh antes de exponer la API a Internet
+   (ver `ADR-004`).

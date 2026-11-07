@@ -48,7 +48,7 @@ tags:
   - name: Reportes
     description: Dashboard y reportes básicos.
   - name: Administración
-    description: Empleados, roles y auditoría.
+    description: Auditoría y tareas administrativas.
 
 security:
   - bearerAuth: []
@@ -88,8 +88,10 @@ paths:
       tags: [Autenticación]
       summary: Registrar usuario y comercio
       description: |
-        Crea el usuario, el comercio, la sucursal `MAIN`, los roles base y la
-        membresía del propietario. Devuelve tokens de acceso.
+        Crea el usuario, el comercio, la sucursal `MAIN` y la membresía del
+        propietario. Devuelve tokens de acceso. No se crean roles: el terminal
+        opera con una cuenta por comercio y puede iniciar sesión en varios
+        teléfonos.
       operationId: register
       security: []
       requestBody:
@@ -196,6 +198,50 @@ paths:
                 $ref: '#/components/schemas/MeResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /v1/auth/sessions:
+    get:
+      tags: [Autenticación]
+      summary: Listar sesiones por dispositivo
+      description: >-
+        Lista las sesiones activas (terminales) de la cuenta: cada teléfono o
+        dispositivo que inició sesión y sigue con un refresh token vigente. El
+        nombre del dispositivo se toma del encabezado `X-Device-Name` enviado en
+        el registro, inicio de sesión o refresh.
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sesiones activas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/auth/sessions/{sessionId}:
+    delete:
+      tags: [Autenticación]
+      summary: Revocar una sesión
+      description: >-
+        Revoca la sesión indicada e invalida su refresh token. Solo puede
+        revocar sesiones de la propia cuenta.
+      operationId: revokeSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204':
+          description: Sesión revocada
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /v1/merchant:
     get:
@@ -1342,7 +1388,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [day, payment_method, employee]
+            enum: [day, payment_method]
             default: day
       responses:
         '200':
@@ -1353,121 +1399,6 @@ paths:
                 $ref: '#/components/schemas/SalesReport'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /v1/users:
-    get:
-      tags: [Administración]
-      summary: Listar empleados
-      operationId: listUsers
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
-      responses:
-        '200':
-          description: Empleados del comercio
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Member'
-                  meta:
-                    $ref: '#/components/schemas/PaginationMeta'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    post:
-      tags: [Administración]
-      summary: Crear empleado
-      description: Crea el usuario y su membresía con el rol indicado.
-      operationId: createUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreateRequest'
-      responses:
-        '201':
-          description: Empleado creado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Member'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-
-  /v1/users/{userId}:
-    parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    patch:
-      tags: [Administración]
-      summary: Actualizar empleado
-      operationId: updateUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserUpdateRequest'
-      responses:
-        '200':
-          description: Empleado actualizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Member'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-
-  /v1/roles:
-    get:
-      tags: [Administración]
-      summary: Listar roles y permisos
-      operationId: listRoles
-      responses:
-        '200':
-          description: Roles del comercio
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Role'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1731,31 +1662,15 @@ components:
           type: string
           format: date-time
 
-    RoleSummary:
-      type: object
-      required: [id, code, name]
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          example: CASHIER
-        name:
-          type: string
-          example: Cajero
-
     Membership:
       type: object
-      required: [merchantId, merchantName, role, status]
+      required: [merchantId, merchantName, status]
       properties:
         merchantId:
           type: string
           format: uuid
         merchantName:
           type: string
-        role:
-          $ref: '#/components/schemas/RoleSummary'
         status:
           type: string
           enum: [ACTIVE, INVITED, SUSPENDED]
@@ -2395,7 +2310,7 @@ components:
       properties:
         groupBy:
           type: string
-          enum: [day, payment_method, employee]
+          enum: [day, payment_method]
         from:
           type: string
           format: date-time
@@ -2417,60 +2332,6 @@ components:
                 $ref: '#/components/schemas/Money'
               netSales:
                 $ref: '#/components/schemas/Money'
-
-    Member:
-      type: object
-      required: [userId, email, fullName, role, status, createdAt]
-      properties:
-        userId:
-          type: string
-          format: uuid
-        email:
-          type: string
-          format: email
-        fullName:
-          type: string
-        role:
-          $ref: '#/components/schemas/RoleSummary'
-        status:
-          type: string
-          enum: [ACTIVE, INVITED, SUSPENDED]
-        createdAt:
-          type: string
-          format: date-time
-
-    Permission:
-      type: object
-      required: [code]
-      properties:
-        code:
-          type: string
-          example: sales.create
-        description:
-          type: string
-          nullable: true
-
-    Role:
-      type: object
-      required: [id, code, name, isSystem, permissions]
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          example: CASHIER
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        isSystem:
-          type: boolean
-        permissions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Permission'
 
     AuditLog:
       type: object
@@ -2578,6 +2439,42 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Membership'
+
+    Session:
+      type: object
+      required: [id, createdAt, lastUsedAt, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceName:
+          type: string
+          nullable: true
+          description: Nombre del dispositivo tomado del encabezado `X-Device-Name`.
+        userAgent:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    SessionList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
 
     MerchantUpdateRequest:
       type: object
@@ -2855,28 +2752,3 @@ components:
         sessionId:
           type: string
           format: uuid
-
-    UserCreateRequest:
-      type: object
-      required: [email, fullName, password, roleCode]
-      properties:
-        email:
-          type: string
-          format: email
-        fullName:
-          type: string
-        password:
-          type: string
-          minLength: 8
-        roleCode:
-          type: string
-          example: CASHIER
-
-    UserUpdateRequest:
-      type: object
-      properties:
-        roleCode:
-          type: string
-        status:
-          type: string
-          enum: [ACTIVE, INVITED, SUSPENDED]

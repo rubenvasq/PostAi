@@ -4,6 +4,7 @@
 - **Fecha:** 2026-11-06
 - **Decisores:** producto + implementación
 - **Contexto relacionado:** `ARQ-002`, `ARQ-003`, `docs/database/data-model.md`
+- **Parcialmente sustituido por:** `ADR-006` (roles de empleado)
 
 ## Contexto
 
@@ -27,7 +28,7 @@ flujo de venta y cobro confiable, no cubrir todos los casos desde el inicio.
 | Variantes | Modeladas, **no expuestas** en el MVP. | Se pospone complejidad de catálogo. |
 | Liquidaciones | Modeladas, **sin UI** en el MVP. | Conciliación se valida con el proveedor real. |
 | Retención | Conservar registros financieros; definir política antes de producción. | No borrar historia del MVP. |
-| Roles | Sembrar `OWNER`, `ADMIN`, `CASHIER`, `SELLER`, `ACCOUNTANT`; asignar rol, sin editor de permisos. | Permisos básicos sin UI compleja. |
+| Roles | ~~Sembrar `OWNER`, `ADMIN`, `CASHIER`, `SELLER`, `ACCOUNTANT`; asignar rol, sin editor de permisos.~~ **Sustituido por `ADR-006`:** el MVP no usa roles de empleado; autoriza por membresía activa al comercio. | Permisos básicos sin UI compleja. |
 | Autenticación | Email + contraseña; access token 15 min; refresh token 30 días con rotación. | Estándar simple y seguro. |
 | Paginación | `page` / `pageSize`, máximo 100. | Sencilla de implementar y consumir. |
 | Pagos simulados | El backend aprueba `CARD_SIMULATED` y lo marca como simulado. | Permite probar el flujo sin SDK. |

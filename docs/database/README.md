@@ -19,7 +19,8 @@ Modelo de datos del núcleo comercial del MVP.
 ## Resumen
 
 - **Multi-tenant** por `Merchant`; `Branch` obligatoria con sucursal `MAIN`.
-- **Usuarios** globales con `Membership` por comercio y roles configurables.
+- **Usuarios** globales con `Membership` por comercio. Sin roles en el MVP:
+  el terminal usa una cuenta por comercio y varios teléfonos pueden compartirla.
 - **Catálogo** con productos/servicios, categorías, variantes e impuestos.
 - **Inventario** por producto y sucursal, con movimientos inmutables.
 - **Ventas** con snapshot de precios y datos del producto.
@@ -48,5 +49,5 @@ No son equivalentes y se modelan por separado:
 
 ## Próximo paso
 
-Aplicar la migración inicial cuando Docker esté disponible y comenzar los
-módulos del MVP (`MVP-001` en adelante).
+La migración inicial `20261107004220_init` ya está aplicada. Comenzar los módulos
+del MVP sobre el esquema vigente (`MVP-002` en adelante).

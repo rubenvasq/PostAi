@@ -56,7 +56,7 @@ administrar ventas, productos, clientes, inventario y caja.
 9. Comprobantes.
 10. Clientes básicos.
 11. Inventario básico.
-12. Empleados y permisos básicos.
+12. Terminales y sesiones por dispositivo (varios teléfonos con la misma cuenta).
 13. Dashboard con indicadores esenciales.
 14. Panel web administrativo básico.
 15. Auditoría de operaciones relevantes.

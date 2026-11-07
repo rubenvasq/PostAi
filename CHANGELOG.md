@@ -38,18 +38,95 @@ versionado se adoptará cuando exista la primera entrega.
     de la API en el panel.
   - Configuración raíz de ESLint, Prettier, typecheck y scripts de workspace.
   - `docker-compose.yml` con PostgreSQL 17 y variables de entorno de ejemplo.
-- Prisma Client generado y esquema validado; migración inicial pendiente de
-  Docker en ejecución.
+- Prisma Client generado y esquema validado; migración inicial
+  `20261107004220_init` creada y aplicada contra PostgreSQL 17.
+- Autenticación y registro del backend (`MVP-001`):
+  - Endpoints `POST /v1/auth/register`, `POST /v1/auth/login`,
+    `POST /v1/auth/refresh`, `POST /v1/auth/logout` y `GET /v1/auth/me`.
+  - Registro transaccional de usuario, comercio, sucursal `MAIN` y membresía.
+  - Access token JWT HS256 de 15 minutos; refresh token opaco de 30 días
+    guardado como hash SHA-256 y rotado/revocado en cada ciclo.
+  - Contraseñas con bcrypt (coste 12; 4 en pruebas) y validación con Zod.
+  - Middleware `requireAuth` y manejo de errores `VALIDATION_ERROR`,
+    `UNAUTHORIZED` y `CONFLICT` según el contrato.
+  - Pruebas de registro, login, refresh, logout y `me` con 11 casos en verde.
+- Comercio y configuración básica del backend (`MVP-002`):
+  - Endpoints `GET/PATCH /v1/merchant` y `GET /v1/branches`.
+  - Contexto de comercio mediante la cabecera `X-Merchant-Id`, validado contra
+    la membresía activa del usuario (`requireMerchant`).
+  - Lecturas y escritura para cualquier miembro activo.
+  - Validación con Zod y aislamiento de datos por `merchantId`.
+- Catálogo del backend (`MVP-003`):
+  - CRUD de categorías (`/v1/categories`), impuestos (`/v1/tax-rates`) y
+    productos/servicios (`/v1/products`).
+  - Paginación, búsqueda y filtros por estado en productos; borrado lógico
+    mediante `isActive`.
+  - Escritura para cualquier miembro activo; aislamiento por `merchantId`.
+  - Importes como enteros en pesos expuestos como string, según `ADR-002`.
+- Clientes básicos del backend (`MVP-008`):
+  - Endpoints `GET/POST /v1/customers` y `GET/PATCH /v1/customers/{customerId}`.
+  - Búsqueda por nombre, correo, teléfono e identificación tributaria, con
+    paginación.
+  - `name` obligatorio; `email`, `phone`, `taxId` y `notes` opcionales y
+    limpiables con `null`; el correo se normaliza a minúsculas.
+  - Lecturas y escritura para cualquier miembro activo. Sin `DELETE`, según el
+    contrato.
+  - Aislamiento estricto por comercio: otro comercio recibe `404`.
+- Inventario básico del backend (`MVP-009`):
+  - Endpoints `GET /v1/inventory`, `POST /v1/inventory/{productId}/adjustments`
+    y `GET /v1/inventory/movements`.
+  - Stock por producto en la sucursal `MAIN` (o la primera sucursal activa),
+    con movimientos inmutables y ajustes transaccionales `Serializable` con
+    reintentos ante conflictos de serialización.
+  - Solo productos `PRODUCT` con `trackInventory = true`; los servicios se crean
+    y actualizan con `trackInventory = false` y quedan fuera del inventario.
+  - Stock no negativo: los ajustes que dejarían cantidad negativa responden
+    `422`. Ajustes con delta cero o más de tres decimales responden `400`.
+  - Lectura y ajuste para cualquier miembro activo.
+- ADR-005 con la decisión de inventario por sucursal y ajustes manuales.
+- ADR-004 con la decisión de autenticación y sesiones.
+- ADR-006 con el modelo de teléfono-terminal: sin roles de empleado y con varios
+  teléfonos usando la misma cuenta.
+- Ajustes de entorno: `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`,
+  `ACCESS_TOKEN_TTL_SECONDS`, `REFRESH_TOKEN_TTL_DAYS` y `BCRYPT_ROUNDS`.
 - CI con GitHub Actions (`INF-007`): formato, lint, typecheck, pruebas y build
   sobre Node.js 22, con caché de npm y cancelación de ejecuciones obsoletas.
 - Publicación inicial en GitHub
   ([`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)) y ejecución correcta
   del CI sobre `main`.
 
+### Cambiado
+
+- El registro ya no crea roles ni permisos: crea usuario, comercio, sucursal
+  `MAIN` y membresía activa.
+- La autorización de comercio, catálogo, clientes e inventario se basa solo en
+  una membresía activa al comercio; cualquier miembro activo puede leer y
+  escribir.
+- Varios teléfonos pueden iniciar sesión con la misma cuenta del comercio; cada
+  sesión tiene su propio refresh token y rotación.
+- El reporte de ventas ya no admite agrupar por `employee`.
+
+### Eliminado
+
+- Modelos `Role`, `Permission` y `RolePermission`, y `Membership.roleId`.
+- Endpoints `GET/POST /v1/users`, `PATCH /v1/users/{userId}` y `GET /v1/roles`.
+- Esquemas `RoleSummary`, `Member`, `Permission`, `Role`,
+  `UserCreateRequest` y `UserUpdateRequest` del contrato v1.
+- Campos `role` de `Membership` en `POST /v1/auth/register`, `POST
+  /v1/auth/login` y `GET /v1/auth/me`.
+- Tarea `MVP-010` de empleados y roles, sustituida por terminales y sesiones por
+  dispositivo.
+
 ### Notas
 
-- El backend y el panel web tienen scaffolding ejecutable. La app Android sigue
+- El backend y el panel web tienen scaffolding ejecutable y la API ya expone
+  autenticación, comercio, catálogo, clientes e inventario. La app Android sigue
   pendiente de la decisión de stack (`ARQ-001`) y el proveedor SoftPOS de
   `PAY-001`.
+- Las pruebas usan repositorios en memoria; los flujos reales de autenticación,
+  comercio, catálogo, clientes e inventario se verificaron manualmente contra
+  PostgreSQL. Las pruebas de integración en CI quedan pendientes.
+- El umbral `lowStockThreshold` todavía no tiene endpoint en el contrato v1; el
+  campo y el filtro `lowStock` existen, pero el umbral permanece nulo en uso real.
 - El repositorio remoto es
   [`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi).

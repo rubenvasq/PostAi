@@ -27,7 +27,7 @@
 
 ### Autenticación y comercio
 
-1. `POST /v1/auth/register` crea usuario, comercio, sucursal `MAIN`, roles y
+1. `POST /v1/auth/register` crea usuario, comercio, sucursal `MAIN` y
    membresía, y devuelve tokens.
 2. `POST /v1/auth/login` devuelve tokens y la lista de comercios del usuario.
 3. Las rutas de negocio requieren `Authorization` y `X-Merchant-Id`.
@@ -71,6 +71,21 @@ Códigos de error estables previstos: `VALIDATION_ERROR`, `UNAUTHORIZED`,
 | POST | `/v1/auth/logout` | Revocar refresh token |
 | GET | `/v1/auth/me` | Usuario y comercios |
 
+Reglas de sesión (`MVP-001`, [`ADR-004`](../architecture/ADR-004-autenticacion-y-sesiones.md)):
+
+- El access token es un JWT `HS256` de **15 minutos**; se envía como
+  `Authorization: Bearer <accessToken>`.
+- El refresh token es opaco, dura **30 días** y se guarda en la base de datos
+  solo como hash SHA-256.
+- `POST /v1/auth/refresh` **rota** el refresh token: el anterior queda revocado.
+  Reutilizarlo responde `401`.
+- `POST /v1/auth/logout` requiere bearer token, revoca el refresh token indicado
+  y responde `204`.
+- `POST /v1/auth/register` crea usuario, comercio, sucursal `MAIN` y membresía
+  en una sola transacción. No crea roles: el terminal usa una cuenta por comercio
+  y varios teléfonos pueden iniciar sesión con ella.
+- Un correo ya registrado responde `409 CONFLICT`.
+
 ### Comercio y catálogo
 
 | Método | Ruta | Descripción |
@@ -94,6 +109,21 @@ Códigos de error estables previstos: `VALIDATION_ERROR`, `UNAUTHORIZED`,
 | GET | `/v1/inventory` | Stock por producto |
 | POST | `/v1/inventory/{productId}/adjustments` | Ajuste manual |
 | GET | `/v1/inventory/movements` | Historial de movimientos |
+
+Reglas de inventario (`MVP-009`, [`ADR-005`](../architecture/ADR-005-inventario-por-sucursal.md)):
+
+- El MVP opera sobre la sucursal `MAIN` del comercio (o la primera sucursal
+  activa si no existe `MAIN`).
+- Solo participan productos de tipo `PRODUCT` con `trackInventory = true`; los
+  servicios y productos sin control de inventario no aparecen ni admiten ajustes.
+- Los ajustes requieren `quantityDelta` distinto de cero, como máximo tres
+  decimales, y un `reason` obligatorio.
+- No se permite stock negativo: un ajuste que dejaría `quantity < 0` responde
+  `422 UNPROCESSABLE_ENTITY`.
+- Lectura y ajuste para cualquier miembro activo; sin roles de empleado
+  (`ADR-006`).
+- `lowStock` filtra por `lowStockThreshold`; el contrato todavía no define cómo
+  configurar ese umbral, por lo que permanece nulo en uso real.
 
 ### Ventas y pagos
 
@@ -126,9 +156,6 @@ Códigos de error estables previstos: `VALIDATION_ERROR`, `UNAUTHORIZED`,
 | --- | --- | --- |
 | GET | `/v1/dashboard/summary` | Resumen del periodo |
 | GET | `/v1/reports/sales` | Reporte agrupado |
-| GET/POST | `/v1/users` | Empleados |
-| PATCH | `/v1/users/{userId}` | Rol o estado |
-| GET | `/v1/roles` | Roles y permisos |
 | GET | `/v1/audit-logs` | Bitácora |
 | GET | `/health` | Estado del servicio |
 

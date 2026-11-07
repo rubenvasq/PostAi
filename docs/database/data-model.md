@@ -17,7 +17,8 @@ Proyecto: **PostAi** (`postai`), del **Equipo PostAi**. Base de datos:
 
 ### Incluido en el MVP
 
-- Comercio, sucursal por defecto, usuarios, roles y permisos.
+- Comercio, sucursal por defecto, usuarios y membresías. Sin roles: el MVP es
+  un teléfono-terminal y varios teléfonos pueden usar la misma cuenta.
 - Catálogo: categorías, productos, servicios y variantes básicas.
 - Impuestos simples y descuentos manuales.
 - Inventario básico por producto y sucursal, con historial de movimientos.
@@ -37,6 +38,9 @@ Proyecto: **PostAi** (`postai`), del **Equipo PostAi**. Base de datos:
 - Contabilidad e integración contable.
 - Facturación electrónica y requisitos fiscales específicos.
 - Multi-sucursal avanzada (se modela `Branch`, pero el MVP opera una sola).
+- Roles y permisos de empleados: el terminal usa una cuenta por comercio.
+- Identificación formal de dispositivos (`Device`/`Terminal`): pendiente de
+  contrato en `MVP-010`; por ahora varios teléfonos comparten la misma cuenta.
 - Variantes avanzadas de inventario (el MVP controla stock por producto).
 - IA y analítica avanzada.
 
@@ -59,6 +63,7 @@ Proyecto: **PostAi** (`postai`), del **Equipo PostAi**. Base de datos:
 | Secretos | `PaymentProvider.configRef` referencia un secreto externo; no guarda credenciales. |
 | Idempotencia | Clave única por comercio en ventas, pagos y reembolsos. |
 | Autoría | Acciones relevantes registran usuario y quedan en `AuditLog`. |
+| Terminal | Varios teléfonos pueden iniciar sesión con la misma cuenta del comercio. No hay roles; el control de acceso es la sesión y el bloqueo del dispositivo (`ADR-006`). |
 
 ### Fórmulas de importes
 
@@ -81,10 +86,6 @@ erDiagram
     Merchant ||--o{ Branch : "tiene"
     Merchant ||--o{ Membership : "agrupa"
     User ||--o{ Membership : "pertenece"
-    Role ||--o{ Membership : "asigna"
-    Merchant ||--o{ Role : "define"
-    Role ||--o{ RolePermission : "concede"
-    Permission ||--o{ RolePermission : "incluye"
     User ||--o{ RefreshToken : "sesiones"
     User ||--o{ AuditLog : "actor"
     Merchant ||--o{ AuditLog : "registra"
@@ -148,10 +149,7 @@ erDiagram
 | `Merchant` | Comercio. Raíz del tenant. | `name`, `legalName?`, `taxId?`, `currency`, `timezone`, `status`, `settings JSON`. |
 | `Branch` | Sucursal operativa. | `merchantId`, `code`, `name`, `isActive`. Único `(merchantId, code)`. En MVP se crea `MAIN`. |
 | `User` | Persona con acceso. | `email` único global, `passwordHash`, `fullName`, `status`. Sin datos de tarjeta. |
-| `Membership` | Pertenencia de un usuario a un comercio. | `userId`, `merchantId`, `roleId`, `status`. Único `(userId, merchantId)`. Permite que un usuario trabaje en varios comercios. |
-| `Role` | Rol configurable por comercio. | `merchantId`, `name`, `code`, `isSystem`. Se siembran `OWNER`, `ADMIN`, `CASHIER`, `SELLER`, `ACCOUNTANT`. |
-| `Permission` | Catálogo global de permisos. | `code` único (por ejemplo `sales.create`, `refunds.create`). |
-| `RolePermission` | Permisos concedidos a un rol. | Clave compuesta `(roleId, permissionId)`. |
+| `Membership` | Pertenencia de un usuario a un comercio. | `userId`, `merchantId`, `status`. Único `(userId, merchantId)`. Permite que un usuario opere varios comercios y que varios teléfonos usen la misma cuenta. |
 | `RefreshToken` | Sesión renovable. | `userId`, `tokenHash` único, `expiresAt`, `revokedAt`. Nunca se guarda el token en claro. |
 | `AuditLog` | Bitácora de acciones relevantes. | `merchantId?`, `actorUserId?`, `action`, `entityType`, `entityId`, `metadata JSON` sanitizado, `ipAddress?`, `userAgent?`. |
 
@@ -269,7 +267,7 @@ movimiento de ajuste.
 13. Solo puede existir una `CashSession` con estado `OPEN` por sucursal.
 14. `CashSession.differenceMinor = closingAmountMinor − expectedAmountMinor`.
 15. Los movimientos de inventario y caja son inmutables.
-16. Toda acción sensible (anulación, reembolso, ajuste, cambio de permisos,
+16. Toda acción sensible (anulación, reembolso, ajuste, cambio de configuración,
     cierre de caja) genera `AuditLog`.
 17. Nunca se persisten PAN, CVV, PIN ni credenciales. Los payloads del
     proveedor se sanitizan antes de guardarse.

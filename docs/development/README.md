@@ -3,8 +3,10 @@
 Guía de entorno, convenciones y flujo de trabajo del repositorio `postai`, del
 **Equipo PostAi**.
 
-> **Estado:** scaffolding inicial disponible (`INF-001`). La API y el panel web
-> funcionan; la app Android sigue pendiente de `ARQ-001`.
+> **Estado:** scaffolding inicial disponible (`INF-001`) y backend con
+> autenticación, comercio, catálogo, clientes e inventario (`MVP-001`,
+> `MVP-002`, `MVP-003`, `MVP-008`, `MVP-009`). La API y el panel web funcionan;
+> la app Android sigue pendiente de `ARQ-001`.
 
 ## Identidad del repositorio
 
@@ -69,7 +71,16 @@ npm run db:down     # detiene los contenedores
 
 La URL por defecto es
 `postgresql://postai:postai@127.0.0.1:5432/postai`.
-El esquema ejecutable está en `apps/api/prisma/schema.prisma`.
+El esquema ejecutable está en `apps/api/prisma/schema.prisma` y la migración
+inicial en `apps/api/prisma/migrations/20261107004220_init`.
+
+```bash
+npm run db:migrate   # aplica migraciones pendientes o crea una nueva
+```
+
+Si `prisma generate` falla en Windows con `EPERM` al renombrar
+`query_engine-windows.dll.node`, detén los watchers de `npm run dev` (o cualquier
+proceso que use Prisma) y vuelve a ejecutar `npm run db:generate`.
 
 ## Comandos
 
@@ -91,7 +102,21 @@ El esquema ejecutable está en `apps/api/prisma/schema.prisma`.
 ## Endpoints base
 
 - `GET /health` — salud de la API.
-- `GET /v1/...` — contrato en [`docs/api/openapi.yaml`](../api/openapi.yaml).
+- `POST /v1/auth/register` — registro de usuario y comercio.
+- `POST /v1/auth/login` — inicio de sesión.
+- `POST /v1/auth/refresh` — rotación del refresh token.
+- `POST /v1/auth/logout` — revocación del refresh token.
+- `GET /v1/auth/me` — usuario y membresías con bearer token.
+- `GET/PATCH /v1/merchant` — comercio activo (cabecera `X-Merchant-Id`).
+- `GET /v1/branches` — sucursales del comercio activo.
+- `GET/POST /v1/categories`, `PATCH/DELETE /v1/categories/{id}` — categorías.
+- `GET/POST /v1/tax-rates` — impuestos.
+- `GET/POST /v1/products`, `GET/PATCH/DELETE /v1/products/{id}` — productos.
+- `GET/POST /v1/customers`, `GET/PATCH /v1/customers/{id}` — clientes.
+- `GET /v1/inventory`, `POST /v1/inventory/{productId}/adjustments`,
+  `GET /v1/inventory/movements` — inventario y movimientos.
+- `GET /v1/...` — contrato completo en
+  [`docs/api/openapi.yaml`](../api/openapi.yaml).
 
 El panel web usa un proxy de Vite hacia `http://127.0.0.1:3000` para `/health` y
 `/v1`.
@@ -106,8 +131,15 @@ El panel web usa un proxy de Vite hacia `http://127.0.0.1:3000` para `/health` y
 | `PORT` | Puerto de la API (3000 por defecto) |
 | `DATABASE_URL` | Conexión PostgreSQL |
 | `CORS_ORIGIN` | Origen permitido del panel web |
+| `JWT_SECRET` | Clave HS256, mínimo 32 caracteres; obligatoria en producción |
+| `JWT_ISSUER` | Emisor del access token (`postai-api`) |
+| `JWT_AUDIENCE` | Audiencia del access token (`postai-clients`) |
+| `ACCESS_TOKEN_TTL_SECONDS` | Vida del access token en segundos (900) |
+| `REFRESH_TOKEN_TTL_DAYS` | Vida del refresh token en días (30) |
+| `BCRYPT_ROUNDS` | Coste de bcrypt (12; 4 en pruebas) |
 
-Los secretos reales no se versionan; `.env` está ignorado por Git.
+Los secretos reales no se versionan; `.env` está ignorado por Git. En producción
+la API se niega a arrancar si `JWT_SECRET` conserva el valor de desarrollo.
 
 ## Ramas y commits
 
@@ -151,4 +183,5 @@ PostgreSQL al flujo. El CI se ejecuta en el repositorio remoto
 
 - Estrategia de pruebas E2E.
 - Stack móvil (`ARQ-001`).
-- Migración inicial aplicada (requiere Docker en ejecución).
+- Pruebas de integración de la API contra PostgreSQL en CI (hoy las pruebas de
+  `auth` usan un repositorio en memoria).

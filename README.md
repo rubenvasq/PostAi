@@ -13,8 +13,9 @@ Plataforma de punto de venta para comercios que permite convertir un teléfono
 Android compatible en un terminal de aceptación de pagos sin contacto mediante
 **SoftPOS**, con backend/API y panel web administrativo.
 
-> **Estado:** scaffolding inicial. API y panel web ejecutables; app Android
-> pendiente de `ARQ-001`. El MVP es **Android únicamente**.
+> **Estado:** API con autenticación, comercio, catálogo, clientes e inventario
+> (`MVP-001`, `MVP-002`, `MVP-003`, `MVP-008`, `MVP-009`), panel web ejecutable;
+> app Android pendiente de `ARQ-001`. El MVP es **Android únicamente**.
 
 ## Inicio rápido
 
@@ -57,7 +58,7 @@ Con Docker disponible: `npm run db:up` para PostgreSQL local. Más detalle en
 
 ## Próximos pasos
 
-1. Implementar autenticación y registro (`MVP-001`).
+1. Terminales y sesiones por dispositivo (`MVP-010`).
 2. Investigar proveedores SoftPOS con operación en Colombia (`PAY-001`).
 3. Solicitar documentación, SDK y sandbox (`PAY-002`).
 4. Decidir el stack móvil (`ARQ-001`).

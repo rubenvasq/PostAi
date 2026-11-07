@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
+import { ZodError } from "zod";
 
 export class AppError extends Error {
   constructor(
@@ -25,6 +26,32 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
         code: error.code,
         message: error.message,
         details: error.details,
+        requestId,
+      },
+    });
+    return;
+  }
+
+  if (error instanceof ZodError) {
+    res.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Datos inválidos",
+        details: error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+        requestId,
+      },
+    });
+    return;
+  }
+
+  if (error instanceof SyntaxError && "status" in error && error.status === 400) {
+    res.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "JSON inválido",
         requestId,
       },
     });
