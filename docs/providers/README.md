@@ -38,6 +38,13 @@ PostAi. Detalle y fuentes en cada ficha.
 | [Redeban](redeban.md) | Sí (verificado) | Por verificar (app propia) | Por verificar | Por verificar | En investigación |
 | [Bold](bold.md) | Sí (verificado) | Por verificar (app propia) | Por verificar | Por verificar | En investigación |
 
+## Alternativas gratuitas interinas
+
+Mientras se valida el SoftPOS real, hay opciones gratuitas para dejar el cobro
+funcional ya (pago simulado y pasarelas con sandbox sin costo ni mensualidad:
+Wompi, Mercado Pago, ePayco, PayU). Ver
+[`alternativas-interinas-gratuitas.md`](alternativas-interinas-gratuitas.md).
+
 ## Checklist obligatorio por proveedor
 
 1. ¿Ofrece SoftPOS para comercios en Colombia?
