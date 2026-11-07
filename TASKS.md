@@ -35,7 +35,6 @@ _(nada por ahora)_
 
 | ID | Tarea | Estado | Depende de |
 | --- | --- | --- | --- |
-| MVP-004 | Carrito y checkout | Pendiente | MVP-003 |
 | MVP-012 | Panel web administrativo básico | Pendiente | MVP-002 |
 
 ### Integración SoftPOS
@@ -85,6 +84,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | MVP-011 | Dashboard e indicadores (backend): `GET /v1/dashboard/summary` y `GET /v1/reports/sales` (agregación por backend, zona `America/Bogota`, aislado por comercio) | 2026-11-06 |
 | MVP-013 | Auditoría (backend): `GET /v1/audit-logs` con filtros y paginación; registro best-effort de `sale.created`, `sale.cancelled` y `payment.approved` con autor y metadatos | 2026-11-06 |
 | MVP-010 | Terminales y sesiones por dispositivo (backend): `GET /v1/auth/sessions` y `DELETE /v1/auth/sessions/{sessionId}`; cada refresh token guarda `deviceName` (`X-Device-Name`), `userAgent`, `ipAddress` y `lastUsedAt`, aislado por usuario | 2026-11-07 |
+| MVP-004 | Carrito y checkout (backend): `POST /v1/carts`, `GET/PATCH/DELETE /v1/carts/{cartId}`, `POST /v1/carts/{cartId}/items`, `PATCH/DELETE .../items/{itemId}` y `POST /v1/carts/{cartId}/checkout`; carrito persistido con totales vivos y checkout idempotente que crea la venta en `DRAFT` (`ADR-008`) | 2026-11-07 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
@@ -139,11 +139,32 @@ SDK, sandbox y condiciones comerciales para Colombia.
 - [x] Migración `20261107052000_add_device_sessions` (aditiva) lista para aplicar.
 - [x] Pruebas automáticas en verde (88 pruebas) y OpenAPI validado.
 
+### Criterios cumplidos de `MVP-004`
+
+- [x] `POST /v1/carts` crea un carrito `OPEN` (cliente y notas opcionales); los
+      totales arrancan en cero y se calculan en vivo contra el catálogo.
+- [x] `POST /v1/carts/{cartId}/items` agrega productos y variantes; si ya existen
+      suma la cantidad. Rechaza producto inexistente/ajeno (`404`) o inactivo
+      (`422`).
+- [x] `PATCH/DELETE .../items/{itemId}` y `PATCH /v1/carts/{cartId}` (cliente,
+      notas, descuento con limpieza por `null`) recalculan totales; solo sobre
+      carritos `OPEN` (`409` en otro estado).
+- [x] Los ítems con producto o variante no disponible se marcan
+      `available: false`, no suman al total y bloquean el checkout.
+- [x] `POST /v1/carts/{cartId}/checkout` crea la venta en `DRAFT` delegando en
+      `SaleService` (recálculo autoritativo, `ADR-007`); es idempotente por
+      carrito (`checkoutSaleId`) y el carrito pasa a `CHECKED_OUT`.
+- [x] Carrito vacío responde `422`; aislamiento por comercio (`404`) y membresía
+      activa sin roles (`ADR-006`, `ADR-008`).
+- [x] Migración `20261107060000_add_carts` (aditiva) lista para aplicar.
+- [x] Pruebas automáticas en verde (102 pruebas, 14 nuevas) y OpenAPI validado.
+
 ## Próxima acción recomendada
 
-1. Aplicar la migración `20261107052000_add_device_sessions` contra PostgreSQL
-   (requiere `docker compose up` y `DATABASE_URL`) y verificar el flujo real de
-   sesiones por dispositivo.
+1. Aplicar las migraciones pendientes contra PostgreSQL (requiere
+   `docker compose up` y `DATABASE_URL`): `20261107052000_add_device_sessions`
+   y `20261107060000_add_carts`, y verificar los flujos reales de sesiones por
+   dispositivo y de carrito/checkout.
 2. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
    en Colombia y registrar hallazgos verificados en `docs/providers/`.
 3. Añadir rate limiting en login/refresh antes de exponer la API a Internet

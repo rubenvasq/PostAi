@@ -154,6 +154,12 @@ enum DiscountType {
   AMOUNT
 }
 
+enum CartStatus {
+  OPEN
+  CHECKED_OUT
+  ABANDONED
+}
+
 // ----------------------------------------------------------------------------
 // Acceso y multi-tenant
 // ----------------------------------------------------------------------------
@@ -189,6 +195,7 @@ model Merchant {
   refunds            Refund[]
   settlements        Settlement[]
   auditLogs          AuditLog[]
+  carts              Cart[]
 
   @@map("merchants")
 }
@@ -211,6 +218,7 @@ model Branch {
   cashSessions       CashSession[]
   cashMovements      CashMovement[]
   expenses           Expense[]
+  carts              Cart[]
 
   @@unique([merchantId, code])
   @@index([merchantId])
@@ -238,6 +246,7 @@ model User {
   discounts          Discount[]          @relation("DiscountCreatedBy")
   expenses           Expense[]           @relation("ExpenseCreatedBy")
   refundsCreated     Refund[]            @relation("RefundCreatedBy")
+  carts              Cart[]              @relation("CartCreatedBy")
 
   @@map("users")
 }
@@ -358,6 +367,7 @@ model Product {
   taxRate        TaxRate?         @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
   variants       ProductVariant[]
   saleItems      SaleItem[]
+  cartItems      CartItem[]
   inventoryItems InventoryItem[]
 
   // Los NULL se consideran distintos en PostgreSQL: permite varios productos
@@ -381,6 +391,7 @@ model ProductVariant {
 
   product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   saleItems SaleItem[]
+  cartItems CartItem[]
 
   @@index([productId])
   @@map("product_variants")
@@ -448,6 +459,7 @@ model Customer {
 
   merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   sales    Sale[]
+  carts    Cart[]
 
   @@index([merchantId, name])
   @@index([merchantId, phone])
@@ -814,4 +826,56 @@ model Expense {
   @@index([merchantId, incurredAt])
   @@index([sessionId])
   @@map("expenses")
+}
+
+// ----------------------------------------------------------------------------
+// Carrito y checkout (MVP-004)
+// ----------------------------------------------------------------------------
+
+model Cart {
+  id                  String        @id @default(uuid()) @db.Uuid
+  merchantId          String        @db.Uuid
+  branchId            String        @db.Uuid
+  createdByUserId     String        @db.Uuid
+  customerId          String?       @db.Uuid
+  status              CartStatus    @default(OPEN)
+  currency            String        @default("COP") @db.Char(3)
+  // Descuento a nivel de carrito. Se persiste la intención; el importe efectivo
+  // se recalcula en cada lectura y en el checkout (ADR-008, mirror de ADR-007).
+  discountType        DiscountType?
+  discountPercentBp   Int?
+  discountAmountMinor BigInt?
+  notes               String?
+  // Venta generada al confirmar el carrito. Hace idempotente el checkout.
+  checkoutSaleId      String?       @db.Uuid
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  merchant  Merchant   @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy User       @relation("CartCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items     CartItem[]
+
+  @@index([merchantId, status])
+  @@index([branchId, createdAt])
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  cartId    String   @db.Uuid
+  productId String   @db.Uuid
+  variantId String?  @db.Uuid
+  quantity  Decimal  @db.Decimal(14, 3)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([cartId])
+  @@map("cart_items")
 }

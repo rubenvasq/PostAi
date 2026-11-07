@@ -34,6 +34,9 @@ import {
 import { createSaleRouter } from "./modules/sale/sale.routes.js";
 import { PrismaSaleRepository } from "./modules/sale/sale.repository.js";
 import { createSaleService, type SaleService } from "./modules/sale/sale.service.js";
+import { createCartRouter } from "./modules/cart/cart.routes.js";
+import { PrismaCartRepository } from "./modules/cart/cart.repository.js";
+import { createCartService, type CartService } from "./modules/cart/cart.service.js";
 import { createReportRouter } from "./modules/report/report.routes.js";
 import { PrismaReportRepository } from "./modules/report/report.repository.js";
 import { createReportService, type ReportService } from "./modules/report/report.service.js";
@@ -49,6 +52,7 @@ export interface AppDependencies {
   customerService?: CustomerService;
   inventoryService?: InventoryService;
   saleService?: SaleService;
+  cartService?: CartService;
   reportService?: ReportService;
   auditService?: AuditService;
 }
@@ -70,6 +74,8 @@ export function createApp(dependencies: AppDependencies = {}) {
   const saleService =
     dependencies.saleService ??
     createSaleService(new PrismaSaleRepository(prisma), (event) => auditService.record(event));
+  const cartService =
+    dependencies.cartService ?? createCartService(new PrismaCartRepository(prisma), saleService);
   const reportService =
     dependencies.reportService ?? createReportService(new PrismaReportRepository(prisma));
 
@@ -89,6 +95,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.use("/v1", createCustomerRouter(customerService, requireAuth, requireMerchant));
   app.use("/v1", createInventoryRouter(inventoryService, requireAuth, requireMerchant));
   app.use("/v1", createSaleRouter(saleService, requireAuth, requireMerchant));
+  app.use("/v1", createCartRouter(cartService, requireAuth, requireMerchant));
   app.use("/v1", createReportRouter(reportService, requireAuth, requireMerchant));
   app.use("/v1", createAuditRouter(auditService, requireAuth, requireMerchant));
 

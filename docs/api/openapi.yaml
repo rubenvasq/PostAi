@@ -39,6 +39,8 @@ tags:
     description: Clientes del comercio.
   - name: Inventario
     description: Stock y movimientos.
+  - name: Carrito
+    description: Carrito de compra y checkout hacia venta.
   - name: Ventas
     description: Ventas, anulación y comprobantes.
   - name: Pagos
@@ -828,6 +830,225 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /v1/carts:
+    post:
+      tags: [Carrito]
+      summary: Crear carrito
+      description: |
+        Crea un carrito vacío en estado `OPEN`. Los totales se calculan en vivo
+        con los precios actuales del catálogo. El carrito se confirma con
+        `POST /v1/carts/{cartId}/checkout`, que genera una venta en `DRAFT`.
+      operationId: createCart
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartCreateRequest'
+      responses:
+        '201':
+          description: Carrito creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/carts/{cartId}:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+    get:
+      tags: [Carrito]
+      summary: Obtener carrito
+      operationId: getCart
+      responses:
+        '200':
+          description: Carrito con totales vivos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Carrito]
+      summary: Actualizar carrito
+      description: |
+        Actualiza cliente, notas o descuento del carrito. Enviar `null` en un
+        campo opcional lo limpia. Solo se permite sobre carritos `OPEN`.
+      operationId: updateCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartUpdateRequest'
+      responses:
+        '200':
+          description: Carrito actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Carrito]
+      summary: Eliminar carrito
+      description: Elimina un carrito `OPEN` o `ABANDONED`. Un carrito confirmado responde `409`.
+      operationId: deleteCart
+      responses:
+        '204':
+          description: Carrito eliminado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /v1/carts/{cartId}/items:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+    post:
+      tags: [Carrito]
+      summary: Agregar ítem al carrito
+      description: |
+        Agrega un producto (y variante opcional). Si el mismo producto y
+        variante ya está en el carrito, suma la cantidad. Solo sobre carritos
+        `OPEN`.
+      operationId: addCartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemCreateRequest'
+      responses:
+        '201':
+          description: Ítem agregado; devuelve el carrito con totales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /v1/carts/{cartId}/items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/CartItemId'
+    patch:
+      tags: [Carrito]
+      summary: Actualizar ítem del carrito
+      operationId: updateCartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemUpdateRequest'
+      responses:
+        '200':
+          description: Ítem actualizado; devuelve el carrito con totales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Carrito]
+      summary: Eliminar ítem del carrito
+      operationId: removeCartItem
+      responses:
+        '200':
+          description: Ítem eliminado; devuelve el carrito con totales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /v1/carts/{cartId}/checkout:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+    post:
+      tags: [Carrito]
+      summary: Confirmar carrito (checkout)
+      description: |
+        Convierte el carrito en una venta `DRAFT`, recalculando precios e
+        impuestos en el servidor. El carrito pasa a `CHECKED_OUT`. La operación
+        es idempotente por carrito: un segundo checkout devuelve la misma venta
+        sin duplicarla. El cobro se registra luego con
+        `POST /v1/sales/{saleId}/payments`.
+      operationId: checkoutCart
+      responses:
+        '201':
+          description: Venta creada a partir del carrito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
   /v1/sales:
     get:
       tags: [Ventas]
@@ -1514,6 +1735,20 @@ components:
         format: uuid
     SaleId:
       name: saleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CartId:
+      name: cartId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CartItemId:
+      name: itemId
       in: path
       required: true
       schema:
@@ -2678,6 +2913,166 @@ components:
           $ref: '#/components/schemas/DiscountInput'
         notes:
           type: string
+
+    CartStatus:
+      type: string
+      enum: [OPEN, CHECKED_OUT, ABANDONED]
+
+    CartItem:
+      type: object
+      required: [id, productId, productName, quantity, available, unitPrice, taxRateBp, tax, lineTotal]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
+        productName:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+          format: double
+        available:
+          type: boolean
+          description: |
+            `false` cuando el producto o la variante dejó de estar disponible en
+            el catálogo. Esos ítems no suman al total y bloquean el checkout.
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        taxRateBp:
+          type: integer
+        tax:
+          $ref: '#/components/schemas/Money'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+        notes:
+          type: string
+          nullable: true
+
+    Cart:
+      type: object
+      required: [id, status, currency, items, subtotal, discount, tax, total, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/CartStatus'
+        currency:
+          type: string
+          example: COP
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        discountType:
+          type: string
+          enum: [PERCENT, AMOUNT]
+          nullable: true
+        discountPercentBp:
+          type: integer
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        discount:
+          $ref: '#/components/schemas/Money'
+        tax:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        checkoutSaleId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Identificador de la venta generada al confirmar el carrito.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CartCreateRequest:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        notes:
+          type: string
+
+    CartUpdateRequest:
+      type: object
+      description: |
+        Al menos un campo. Enviar `null` en `customerId`, `notes` o `discount`
+        limpia ese valor.
+      properties:
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        discount:
+          type: object
+          nullable: true
+          required: [type]
+          description: Igual que `DiscountInput`; `null` elimina el descuento del carrito.
+          properties:
+            type:
+              type: string
+              enum: [PERCENT, AMOUNT]
+            percentBp:
+              type: integer
+              minimum: 0
+              maximum: 10000
+            amount:
+              $ref: '#/components/schemas/Money'
+
+    CartItemCreateRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          format: double
+          minimum: 0.001
+        notes:
+          type: string
+
+    CartItemUpdateRequest:
+      type: object
+      description: Al menos un campo. `notes` acepta `null` para limpiarlo.
+      properties:
+        quantity:
+          type: number
+          format: double
+          minimum: 0.001
+        notes:
+          type: string
+          nullable: true
 
     PaymentCreateRequest:
       type: object
