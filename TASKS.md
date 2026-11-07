@@ -18,7 +18,6 @@ _(nada por ahora)_
 | ID | Tarea | Estado | Depende de |
 | --- | --- | --- | --- |
 | ARQ-001 | Decidir stack móvil y registrar ADR-001 | Pendiente | investigación SDK |
-| PAY-001 | Investigar proveedores SoftPOS con operación en Colombia | Pendiente | — |
 | PAY-002 | Solicitar documentación, SDK y sandbox | Pendiente | PAY-001 |
 | PAY-003 | Confirmar dispositivos Android compatibles | Pendiente | PAY-001 |
 | PAY-004 | Validar certificaciones (PCI MPoC cuando aplique) | Pendiente | PAY-001 |
@@ -85,6 +84,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | MVP-013 | Auditoría (backend): `GET /v1/audit-logs` con filtros y paginación; registro best-effort de `sale.created`, `sale.cancelled` y `payment.approved` con autor y metadatos | 2026-11-06 |
 | MVP-010 | Terminales y sesiones por dispositivo (backend): `GET /v1/auth/sessions` y `DELETE /v1/auth/sessions/{sessionId}`; cada refresh token guarda `deviceName` (`X-Device-Name`), `userAgent`, `ipAddress` y `lastUsedAt`, aislado por usuario | 2026-11-07 |
 | MVP-004 | Carrito y checkout (backend): `POST /v1/carts`, `GET/PATCH/DELETE /v1/carts/{cartId}`, `POST /v1/carts/{cartId}/items`, `PATCH/DELETE .../items/{itemId}` y `POST /v1/carts/{cartId}/checkout`; carrito persistido con totales vivos y checkout idempotente que crea la venta en `DRAFT` (`ADR-008`) | 2026-11-07 |
+| PAY-001 | Investigar proveedores SoftPOS con operación en Colombia y registrar fuentes verificadas: fichas de Credibanco, Symbiotic, SumUp, Redeban y Bold en `docs/providers/`, con tabla de candidatos y criterio de encaje por SDK | 2026-11-07 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
@@ -159,12 +159,32 @@ SDK, sandbox y condiciones comerciales para Colombia.
 - [x] Migración `20261107060000_add_carts` (aditiva) lista para aplicar.
 - [x] Pruebas automáticas en verde (102 pruebas, 14 nuevas) y OpenAPI validado.
 
+### Hallazgos de `PAY-001` (2026-11-07)
+
+- Candidatos con **SDK para apps de terceros** (encaje con PostAi, prioritarios):
+  **Credibanco** (adquirente local; SDK, deep link y white-label; Android 8.1+;
+  NFC; Visa/Amex/MC; hasta $250.000 COP) y **Symbiotic** (habilitador LATAM;
+  SDK/white-label/deep link; declara MPoC y CPoC; Colombia confirmada).
+- Soluciones de **app propia** (encaje por confirmar): **SumUp** (Colombia,
+  2,49 % + IVA), **Redeban** (Tap to Phone con Visa) y **Bold** (Bold Tap).
+- Todo lo sensible (PCI MPoC con evidencia, dispositivos, sandbox, webhooks,
+  reembolsos, liquidaciones y comisiones de los habilitadores) sigue
+  `Por verificar` y es alcance de `PAY-002` a `PAY-005`.
+- Detalle y fuentes en `docs/providers/` (una ficha por proveedor).
+
 ## Próxima acción recomendada
 
-1. Aplicar las migraciones pendientes contra PostgreSQL (requiere
-   `docker compose up` y `DATABASE_URL`): `20261107052000_add_device_sessions`
-   y `20261107060000_add_carts`, y verificar los flujos reales de sesiones por
-   dispositivo y de carrito/checkout.
+1. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
+   documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
+   estado PCI MPoC y el modelo de contratación en Colombia.
+2. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+   para terceros; si solo operan con su app propia, marcarlos `Descartado` para
+   el modelo de PostAi.
+3. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+   `ARQ-004` (contrato interno `PaymentProvider`).
+4. Pendiente operativo: las migraciones `20261107052000_add_device_sessions` y
+   `20261107060000_add_carts` ya están aplicadas y verificadas contra
+   PostgreSQL.
 2. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
    en Colombia y registrar hallazgos verificados en `docs/providers/`.
 3. Añadir rate limiting en login/refresh antes de exponer la API a Internet

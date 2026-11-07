@@ -4,7 +4,15 @@ Registro de la investigación de proveedores para aceptación de pagos sin
 contacto en Android, con foco en **Colombia**.
 
 > **Estado:** sin proveedor seleccionado ni soporte confirmado.
-> SumUp y Symbiotic son **nombres a investigar**, no integraciones aprobadas.
+> Los proveedores listados están **en investigación** (PAY-001): hay hallazgos
+> verificados con fuente y fecha, pero ninguno validado ni aprobado para
+> integrar. Varios requisitos clave siguen `Por verificar` (ver cada ficha).
+
+> **Criterio de encaje con PostAi:** PostAi necesita **incrustar** la aceptación
+> sin contacto en su **propia app Android**, por lo que se prioriza a los
+> proveedores que ofrecen **SDK para terceros**. Las soluciones que solo operan
+> mediante la app del propio proveedor tienen encaje limitado hasta confirmar si
+> exponen un SDK/programa de integración.
 
 ## Reglas de este registro
 
@@ -19,10 +27,16 @@ contacto en Android, con foco en **Colombia**.
 
 ## Candidatos
 
+Resumen al 2026-11-07. "SDK para apps de terceros" es el criterio de encaje con
+PostAi. Detalle y fuentes en cada ficha.
+
 | Proveedor | SoftPOS en Colombia | SDK para apps de terceros | Sandbox | Documentación | Estado |
 | --- | --- | --- | --- | --- | --- |
-| SumUp | Por verificar | Por verificar | Por verificar | Por verificar | Sin evaluar |
-| Symbiotic | Por verificar | Por verificar | Por verificar | Por verificar | Sin evaluar |
+| [Credibanco](credibanco.md) | Sí (verificado) | Sí — SDK, deep link y white-label (verificado) | Por verificar | Por verificar | En investigación — prioritario |
+| [Symbiotic](symbiotic.md) | Sí (verificado) | Sí — SDK, white-label y deep link (verificado) | Por verificar | Por verificar | En investigación — prioritario |
+| [SumUp](sumup.md) | Sí (verificado) | Por verificar (solo app propia en docs públicas) | Por verificar | Por verificar | En investigación |
+| [Redeban](redeban.md) | Sí (verificado) | Por verificar (app propia) | Por verificar | Por verificar | En investigación |
+| [Bold](bold.md) | Sí (verificado) | Por verificar (app propia) | Por verificar | Por verificar | En investigación |
 
 ## Checklist obligatorio por proveedor
 
