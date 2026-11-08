@@ -12,8 +12,9 @@ _(nada por ahora)_
 ### `MVP-012` — Panel web administrativo básico
 
 Implementado en la rama `feat/mvp-012-panel-admin` contra el contrato `/v1`
-existente, sin cambios de backend. Pendiente de revisión del arquitecto y de
-verificación manual completa contra PostgreSQL/API real (ver criterios).
+existente, sin cambios de backend. Verificado de extremo a extremo contra
+PostgreSQL 17, la API real y el panel servido por Vite. Pendiente solo de
+revisión del arquitecto antes de fusionar.
 
 - [x] Login contra `POST /v1/auth/login`; logout contra
       `POST /v1/auth/logout`; sesión en `sessionStorage`.
@@ -33,8 +34,11 @@ verificación manual completa contra PostgreSQL/API real (ver criterios).
 - [x] Errores con el formato del contrato y entradas validadas en formularios.
 - [x] `npm run lint`, `npm run typecheck`, build del panel y `format:check` en
       verde; pruebas de la API en verde (102).
-- [ ] Verificación manual completa del panel contra la API real y PostgreSQL
-      (Docker/DB no disponibles al cerrar la implementación).
+- [x] Verificación E2E contra PostgreSQL 17, API real y panel en Vite:
+      registro, login, refresh, logout, `me`, comercio, catálogo, clientes,
+      inventario, venta, pago simulado, comprobante, dashboard y reportes.
+- [x] Verificación de UI con navegador headless: login, dashboard, catálogo,
+      clientes, inventario, historial, detalle de venta y aviso de simulado.
 - [ ] Revisión del arquitecto antes de fusionar.
 
 Decisiones registradas en

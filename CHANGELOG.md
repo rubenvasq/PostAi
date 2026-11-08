@@ -147,8 +147,10 @@ versionado se adoptará cuando exista la primera entrega.
   La app Android sigue pendiente de la decisión de stack (`ARQ-001`) y el
   proveedor SoftPOS de `PAY-001`.
 - Las pruebas usan repositorios en memoria; los flujos reales de autenticación,
-  comercio, catálogo, clientes e inventario se verificaron manualmente contra
-  PostgreSQL. Las pruebas de integración en CI quedan pendientes.
+  comercio, catálogo, clientes, inventario, ventas, pagos simulados, comprobante,
+  dashboard y reportes se verificaron manualmente contra PostgreSQL 17. El panel
+  `MVP-012` se verificó además con un navegador headless sobre la API real. Las
+  pruebas de integración en CI quedan pendientes.
 - El umbral `lowStockThreshold` todavía no tiene endpoint en el contrato v1; el
   campo y el filtro `lowStock` existen, pero el umbral permanece nulo en uso real.
 - El repositorio remoto es
