@@ -9,41 +9,7 @@ _(nada por ahora)_
 
 ## En revisión
 
-### `MVP-012` — Panel web administrativo básico
-
-Implementado en la rama `feat/mvp-012-panel-admin` contra el contrato `/v1`
-existente, sin cambios de backend. Verificado de extremo a extremo contra
-PostgreSQL 17, la API real y el panel servido por Vite. Pendiente solo de
-revisión del arquitecto antes de fusionar.
-
-- [x] Login contra `POST /v1/auth/login`; logout contra
-      `POST /v1/auth/logout`; sesión en `sessionStorage`.
-- [x] Renovación transparente del access token con `POST /v1/auth/refresh` y
-      una sola promesa compartida ante `401` concurrentes.
-- [x] `X-Merchant-Id` en llamadas con contexto de comercio y selector cuando el
-      usuario tiene varias membresías activas.
-- [x] Dashboard con `GET /v1/dashboard/summary` y `GET /v1/reports/sales`
-      (rango de fechas, ventas por día y pagos por método).
-- [x] Catálogo con CRUD mínimo: productos/servicios, categorías e impuestos,
-      búsqueda y paginación.
-- [x] Clientes con búsqueda, paginación, alta y edición.
-- [x] Inventario con stock, filtro `lowStock`, ajustes y movimientos.
-- [x] Historial de ventas, detalle, pagos y comprobante imprimible.
-- [x] Pagos simulados distinguidos con insignia y aviso explícito; el panel solo
-      muestra estados que calcula el backend.
-- [x] Errores con el formato del contrato y entradas validadas en formularios.
-- [x] `npm run lint`, `npm run typecheck`, build del panel y `format:check` en
-      verde; pruebas de la API en verde (102).
-- [x] Verificación E2E contra PostgreSQL 17, API real y panel en Vite:
-      registro, login, refresh, logout, `me`, comercio, catálogo, clientes,
-      inventario, venta, pago simulado, comprobante, dashboard y reportes.
-- [x] Verificación de UI con navegador headless: login, dashboard, catálogo,
-      clientes, inventario, historial, detalle de venta y aviso de simulado.
-- [ ] Revisión del arquitecto antes de fusionar.
-
-Decisiones registradas en
-[`ADR-009`](docs/architecture/ADR-009-panel-web-sesion-y-navegacion.md).
-Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
+_(nada por ahora)_
 
 ## Pendientes
 
@@ -113,6 +79,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | MVP-010 | Terminales y sesiones por dispositivo (backend): `GET /v1/auth/sessions` y `DELETE /v1/auth/sessions/{sessionId}`; cada refresh token guarda `deviceName` (`X-Device-Name`), `userAgent`, `ipAddress` y `lastUsedAt`, aislado por usuario | 2026-11-07 |
 | MVP-004 | Carrito y checkout (backend): `POST /v1/carts`, `GET/PATCH/DELETE /v1/carts/{cartId}`, `POST /v1/carts/{cartId}/items`, `PATCH/DELETE .../items/{itemId}` y `POST /v1/carts/{cartId}/checkout`; carrito persistido con totales vivos y checkout idempotente que crea la venta en `DRAFT` (`ADR-008`) | 2026-11-07 |
 | PAY-001 | Investigar proveedores SoftPOS con operación en Colombia y registrar fuentes verificadas: fichas de Credibanco, Symbiotic, SumUp, Redeban y Bold en `docs/providers/`, con tabla de candidatos y criterio de encaje por SDK | 2026-11-07 |
+| MVP-012 | Panel web administrativo básico (`apps/admin`): auth con refresh compartido, dashboard, ventas, catálogo, clientes e inventario contra `/v1`, sin cambios de backend (`ADR-009`) | 2026-11-07 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
@@ -187,6 +154,40 @@ SDK, sandbox y condiciones comerciales para Colombia.
 - [x] Migración `20261107060000_add_carts` (aditiva) lista para aplicar.
 - [x] Pruebas automáticas en verde (102 pruebas, 14 nuevas) y OpenAPI validado.
 
+### Criterios cumplidos de `MVP-012`
+
+- [x] Login contra `POST /v1/auth/login`; logout contra
+      `POST /v1/auth/logout`; sesión en `sessionStorage`.
+- [x] Renovación transparente del access token con `POST /v1/auth/refresh` y
+      una sola promesa compartida ante `401` concurrentes.
+- [x] `X-Merchant-Id` en llamadas con contexto de comercio y selector cuando el
+      usuario tiene varias membresías activas.
+- [x] Dashboard con `GET /v1/dashboard/summary` y `GET /v1/reports/sales`
+      (rango de fechas, ventas por día y pagos por método).
+- [x] Catálogo con CRUD mínimo: productos/servicios, categorías e impuestos,
+      búsqueda y paginación.
+- [x] Clientes con búsqueda, paginación, alta y edición.
+- [x] Inventario con stock, filtro `lowStock`, ajustes y movimientos.
+- [x] Historial de ventas, detalle, pagos y comprobante imprimible.
+- [x] Pagos simulados distinguidos con insignia y aviso explícito; el panel solo
+      muestra estados que calcula el backend.
+- [x] Errores con el formato del contrato y entradas validadas en formularios.
+- [x] `npm run lint`, `npm run typecheck`, build del panel y `format:check` en
+      verde; pruebas de la API en verde (102).
+- [x] Verificación E2E contra PostgreSQL 17, API real y panel en Vite:
+      registro, login, refresh, logout, `me`, comercio, catálogo, clientes,
+      inventario, venta, pago simulado, comprobante, dashboard y reportes.
+- [x] Verificación de UI con navegador headless: login, dashboard, catálogo,
+      clientes, inventario, historial, detalle de venta y aviso de simulado.
+- [x] Merge del PR
+      [#1](https://github.com/rubenvasq/PostAi/pull/1) (`ddc8d19`), autorizado
+      por el responsable del repositorio y con CI en verde (run
+      `42430371896`).
+
+Decisiones registradas en
+[`ADR-009`](docs/architecture/ADR-009-panel-web-sesion-y-navegacion.md).
+Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
+
 ### Hallazgos de `PAY-001` (2026-11-07)
 
 - Candidatos con **SDK para apps de terceros** (encaje con PostAi, prioritarios):
@@ -202,17 +203,16 @@ SDK, sandbox y condiciones comerciales para Colombia.
 
 ## Próxima acción recomendada
 
-1. Revisar `MVP-012`: levantar PostgreSQL (`npm run db:up`), aplicar
-   migraciones (`npm run db:migrate`), arrancar API y panel, y verificar el flujo
-   completo de login, dashboard, catálogo, clientes, inventario, ventas y
-   comprobante con datos reales.
-2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
+1. Añadir rate limiting en login/refresh antes de exponer la API a Internet
+   (ver `ADR-004`).
+2. Implementar reembolsos en backend y panel
+   (`GET/POST /v1/payments/{paymentId}/refunds`, reembolso total en el MVP): el
+   contrato ya está definido y el dashboard ya muestra `REEMBOLSOS`.
+3. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
    documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
    estado PCI MPoC y el modelo de contratación en Colombia.
-3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+4. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.
-4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+5. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
    `ARQ-004` (contrato interno `PaymentProvider`).
-5. Añadir rate limiting en login/refresh antes de exponer la API a Internet
-   (ver `ADR-004`).
