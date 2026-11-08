@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
+import {
+  createAuthRateLimiters,
+  type AuthRateLimitOptions,
+} from "../src/modules/auth/auth.rate-limit.js";
 import { createAuthService } from "../src/modules/auth/auth.service.js";
 import type {
   AuthRepository,
@@ -162,6 +166,16 @@ const registerBody = {
 function setup() {
   const repository = new InMemoryAuthRepository();
   const app = createApp({ authService: createAuthService(repository) });
+
+  return { app, repository };
+}
+
+function setupWithRateLimits(options: AuthRateLimitOptions) {
+  const repository = new InMemoryAuthRepository();
+  const app = createApp({
+    authService: createAuthService(repository),
+    authRateLimiters: createAuthRateLimiters(options),
+  });
 
   return { app, repository };
 }
@@ -408,5 +422,111 @@ describe("DELETE /v1/auth/sessions/{sessionId}", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error).toMatchObject({ code: "VALIDATION_ERROR" });
+  });
+});
+
+describe("rate limiting de autenticación", () => {
+  function wrongPassword(app: ReturnType<typeof setup>["app"], email: string) {
+    return request(app).post("/v1/auth/login").send({ email, password: "incorrecta" });
+  }
+
+  it("bloquea el login tras superar el máximo de fallos por correo", async () => {
+    const { app } = setupWithRateLimits({
+      windowMs: 60_000,
+      loginMaxAttemptsPerEmail: 2,
+      loginMaxAttemptsPerIp: 100,
+    });
+    await request(app).post("/v1/auth/register").send(registerBody);
+
+    expect((await wrongPassword(app, "owner@example.com")).status).toBe(401);
+    expect((await wrongPassword(app, "owner@example.com")).status).toBe(401);
+
+    const blocked = await wrongPassword(app, "owner@example.com");
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error).toMatchObject({
+      code: "RATE_LIMITED",
+      details: { retryAfterSeconds: expect.any(Number) },
+    });
+    expect(Number(blocked.headers["retry-after"])).toBeGreaterThan(0);
+  });
+
+  it("limita los fallos por IP aunque cambie el correo", async () => {
+    const { app } = setupWithRateLimits({
+      windowMs: 60_000,
+      loginMaxAttemptsPerEmail: 100,
+      loginMaxAttemptsPerIp: 2,
+    });
+    await request(app).post("/v1/auth/register").send(registerBody);
+
+    expect((await wrongPassword(app, "a@example.com")).status).toBe(401);
+    expect((await wrongPassword(app, "b@example.com")).status).toBe(401);
+
+    const blocked = await wrongPassword(app, "c@example.com");
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error).toMatchObject({ code: "RATE_LIMITED" });
+  });
+
+  it("un login exitoso reinicia los fallos acumulados del correo", async () => {
+    const { app } = setupWithRateLimits({
+      windowMs: 60_000,
+      loginMaxAttemptsPerEmail: 2,
+      loginMaxAttemptsPerIp: 100,
+    });
+    await request(app).post("/v1/auth/register").send(registerBody);
+
+    expect((await wrongPassword(app, "owner@example.com")).status).toBe(401);
+
+    const success = await request(app)
+      .post("/v1/auth/login")
+      .send({ email: "owner@example.com", password: "secreto123" });
+    expect(success.status).toBe(200);
+
+    expect((await wrongPassword(app, "owner@example.com")).status).toBe(401);
+    expect((await wrongPassword(app, "owner@example.com")).status).toBe(401);
+    expect((await wrongPassword(app, "owner@example.com")).status).toBe(429);
+  });
+
+  it("limita los refresh inválidos por IP", async () => {
+    const { app } = setupWithRateLimits({
+      windowMs: 60_000,
+      refreshMaxAttemptsPerIp: 2,
+    });
+
+    const invalidRefresh = () =>
+      request(app)
+        .post("/v1/auth/refresh")
+        .send({ refreshToken: "token-invalido-de-mas-de-veinte-caracteres" });
+
+    expect((await invalidRefresh()).status).toBe(401);
+    expect((await invalidRefresh()).status).toBe(401);
+
+    const blocked = await invalidRefresh();
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error).toMatchObject({
+      code: "RATE_LIMITED",
+      details: { retryAfterSeconds: expect.any(Number) },
+    });
+    expect(Number(blocked.headers["retry-after"])).toBeGreaterThan(0);
+  });
+
+  it("no cuenta los errores de validación como intentos fallidos", async () => {
+    const { app } = setupWithRateLimits({
+      windowMs: 60_000,
+      loginMaxAttemptsPerEmail: 1,
+      loginMaxAttemptsPerIp: 100,
+    });
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const response = await request(app)
+        .post("/v1/auth/login")
+        .send({ email: "no-es-un-correo", password: "corta" });
+      expect(response.status).toBe(400);
+    }
+
+    const firstFailure = await wrongPassword(app, "owner@example.com");
+    expect(firstFailure.status).toBe(401);
   });
 });

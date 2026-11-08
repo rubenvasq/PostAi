@@ -7,6 +7,7 @@ export class AppError extends Error {
     public readonly code: string,
     message: string,
     public readonly details?: unknown,
+    public readonly headers?: Record<string, string>,
   ) {
     super(message);
     this.name = "AppError";
@@ -21,6 +22,12 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const requestId = typeof res.locals.requestId === "string" ? res.locals.requestId : undefined;
 
   if (error instanceof AppError) {
+    if (error.headers) {
+      for (const [name, value] of Object.entries(error.headers)) {
+        res.setHeader(name, value);
+      }
+    }
+
     res.status(error.statusCode).json({
       error: {
         code: error.code,

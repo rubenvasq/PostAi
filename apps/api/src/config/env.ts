@@ -14,6 +14,10 @@ const envSchema = z
     ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().max(3600).default(900),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(365).default(30),
     BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
+    AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().max(86400).default(900),
+    AUTH_LOGIN_MAX_ATTEMPTS_PER_EMAIL: z.coerce.number().int().positive().max(1000).default(5),
+    AUTH_LOGIN_MAX_ATTEMPTS_PER_IP: z.coerce.number().int().positive().max(1000).default(30),
+    AUTH_REFRESH_MAX_ATTEMPTS_PER_IP: z.coerce.number().int().positive().max(1000).default(60),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV === "production" && value.JWT_SECRET === DEV_JWT_SECRET) {

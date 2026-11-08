@@ -107,15 +107,30 @@ entradas se validan con Zod y los errores usan el formato del contrato
   toda la familia de sesiones; habría que añadir `familyId` si se requiere.
 - No hay verificación de correo, recuperación de contraseña ni segundo factor en
   el MVP.
-- No hay límite de intentos de login en esta tarea; debe añadirse antes de
-  exponer el servicio a Internet.
+- El rate limiting es en memoria y por instancia: acota ataques de fuerza bruta
+  pero no se comparte entre réplicas; con escalado horizontal habrá que moverlo a
+  un almacén compartido (p. ej. Redis).
+
+### Límite de intentos (rate limiting)
+
+Para mitigar fuerza bruta se limitan solo los **intentos fallidos** de `login` y
+`refresh` con una ventana deslizante en memoria (`createAttemptRateLimiter`):
+
+- `login`: por correo (`AUTH_LOGIN_MAX_ATTEMPTS_PER_EMAIL`, 5) y por IP
+  (`AUTH_LOGIN_MAX_ATTEMPTS_PER_IP`, 30); un login exitoso reinicia el contador
+  del correo.
+- `refresh`: por IP (`AUTH_REFRESH_MAX_ATTEMPTS_PER_IP`, 60).
+- Ventana común `AUTH_RATE_LIMIT_WINDOW_SECONDS` (900 s).
+- Al superar el límite se responde `429 RATE_LIMITED` con `Retry-After`.
+- Las claves se derivan con SHA-256; no se guardan correos ni IP en claro ni en
+  logs.
 
 ### Acciones derivadas
 
 - [x] Implementar el módulo `auth` y montarlo en `/v1/auth` (`MVP-001`).
 - [x] Guardar refresh tokens solo como hash y rotarlos en cada uso.
 - [x] Crear la migración inicial de Prisma y probar el flujo contra PostgreSQL.
-- [ ] Añadir rate limiting en login y refresh antes de producción.
+- [x] Añadir rate limiting en login y refresh antes de producción.
 - [ ] Evaluar detección de reutilización de refresh tokens y verificación de
       correo en una fase posterior.
 

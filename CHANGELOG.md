@@ -9,6 +9,13 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Añadido
 
+- Rate limiting de autenticación: límite de intentos fallidos en `POST
+  /v1/auth/login` (por correo e IP) y `POST /v1/auth/refresh` (por IP) con
+  ventana deslizante en memoria, respuesta `429 RATE_LIMITED` con `Retry-After`
+  y claves derivadas con SHA-256; configurable por variables de entorno
+  (`AUTH_RATE_LIMIT_WINDOW_SECONDS`, `AUTH_LOGIN_MAX_ATTEMPTS_PER_EMAIL`,
+  `AUTH_LOGIN_MAX_ATTEMPTS_PER_IP`, `AUTH_REFRESH_MAX_ATTEMPTS_PER_IP`). Ver
+  `ADR-004`.
 - Documento de contexto operativo `PROJECT_CONTEXT.md`.
 - Reglas y convenciones para agentes en `AGENTS.md`.
 - Backlog inicial y fuente de verdad del progreso en `TASKS.md`.

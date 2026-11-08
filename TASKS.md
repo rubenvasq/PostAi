@@ -79,6 +79,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | MVP-010 | Terminales y sesiones por dispositivo (backend): `GET /v1/auth/sessions` y `DELETE /v1/auth/sessions/{sessionId}`; cada refresh token guarda `deviceName` (`X-Device-Name`), `userAgent`, `ipAddress` y `lastUsedAt`, aislado por usuario | 2026-11-07 |
 | MVP-004 | Carrito y checkout (backend): `POST /v1/carts`, `GET/PATCH/DELETE /v1/carts/{cartId}`, `POST /v1/carts/{cartId}/items`, `PATCH/DELETE .../items/{itemId}` y `POST /v1/carts/{cartId}/checkout`; carrito persistido con totales vivos y checkout idempotente que crea la venta en `DRAFT` (`ADR-008`) | 2026-11-07 |
 | PAY-001 | Investigar proveedores SoftPOS con operación en Colombia y registrar fuentes verificadas: fichas de Credibanco, Symbiotic, SumUp, Redeban y Bold en `docs/providers/`, con tabla de candidatos y criterio de encaje por SDK | 2026-11-07 |
+| SEC-001 | Rate limiting de autenticación: límite de intentos fallidos en `POST /v1/auth/login` (por correo e IP) y `POST /v1/auth/refresh` (por IP), respuesta `429 RATE_LIMITED` con `Retry-After`, configurable por entorno (`ADR-004`) | 2026-11-07 |
 | MVP-012 | Panel web administrativo básico (`apps/admin`): auth con refresh compartido, dashboard, ventas, catálogo, clientes e inventario contra `/v1`, sin cambios de backend (`ADR-009`) | 2026-11-07 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
@@ -203,16 +204,14 @@ Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
 
 ## Próxima acción recomendada
 
-1. Añadir rate limiting en login/refresh antes de exponer la API a Internet
-   (ver `ADR-004`).
-2. Implementar reembolsos en backend y panel
+1. Implementar reembolsos en backend y panel
    (`GET/POST /v1/payments/{paymentId}/refunds`, reembolso total en el MVP): el
    contrato ya está definido y el dashboard ya muestra `REEMBOLSOS`.
-3. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
+2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
    documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
    estado PCI MPoC y el modelo de contratación en Colombia.
-4. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.
-5. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
    `ARQ-004` (contrato interno `PaymentProvider`).

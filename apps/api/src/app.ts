@@ -8,6 +8,7 @@ import { requestId } from "./middleware/request-id.js";
 import { createRequireAuth } from "./middleware/require-auth.js";
 import { createRequireMerchant } from "./middleware/require-merchant.js";
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
+import { createAuthRateLimiters, type AuthRateLimiters } from "./modules/auth/auth.rate-limit.js";
 import { PrismaAuthRepository } from "./modules/auth/auth.repository.js";
 import { createAuthService, type AuthService } from "./modules/auth/auth.service.js";
 import { createMerchantRouter } from "./modules/merchant/merchant.routes.js";
@@ -47,6 +48,7 @@ import { healthRouter } from "./routes/health.js";
 
 export interface AppDependencies {
   authService?: AuthService;
+  authRateLimiters?: AuthRateLimiters;
   merchantService?: MerchantService;
   catalogService?: CatalogService;
   customerService?: CustomerService;
@@ -61,6 +63,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   const app = express();
   const authService =
     dependencies.authService ?? createAuthService(new PrismaAuthRepository(prisma));
+  const authRateLimiters = dependencies.authRateLimiters ?? createAuthRateLimiters();
   const merchantService =
     dependencies.merchantService ?? createMerchantService(new PrismaMerchantRepository(prisma));
   const catalogService =
@@ -89,7 +92,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   const requireMerchant = createRequireMerchant(merchantService);
 
   app.use("/health", healthRouter);
-  app.use("/v1/auth", createAuthRouter(authService));
+  app.use("/v1/auth", createAuthRouter(authService, authRateLimiters));
   app.use("/v1", createMerchantRouter(merchantService, requireAuth, requireMerchant));
   app.use("/v1", createCatalogRouter(catalogService, requireAuth, requireMerchant));
   app.use("/v1", createCustomerRouter(customerService, requireAuth, requireMerchant));

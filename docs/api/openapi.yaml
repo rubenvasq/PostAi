@@ -141,6 +141,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /v1/auth/refresh:
     post:
@@ -163,6 +165,8 @@ paths:
                 $ref: '#/components/schemas/AuthTokens'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /v1/auth/logout:
     post:
@@ -1802,6 +1806,18 @@ components:
             $ref: '#/components/schemas/Error'
     UnprocessableEntity:
       description: Regla de negocio o validación semántica
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Demasiados intentos; el cliente debe esperar antes de reintentar
+      headers:
+        Retry-After:
+          description: Segundos que faltan para volver a intentar
+          schema:
+            type: integer
+            minimum: 1
       content:
         application/json:
           schema:
