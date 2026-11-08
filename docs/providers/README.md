@@ -32,7 +32,7 @@ PostAi. Detalle y fuentes en cada ficha.
 
 | Proveedor | SoftPOS en Colombia | SDK para apps de terceros | Sandbox | Documentación | Estado |
 | --- | --- | --- | --- | --- | --- |
-| [Credibanco](credibanco.md) | Sí (verificado) | Sí — SDK, deep link y white-label (verificado) | Por verificar | Por verificar | En investigación — prioritario |
+| [Credibanco](credibanco.md) | Sí (verificado) | Sí — SDK, deep link y white-label (verificado) | Sí — sandbox del marketplace, registro propio (verificado) | API REST pública (Swaggers + PDF); SDK bajo acuerdo | En investigación — prioritario |
 | [Symbiotic](symbiotic.md) | Sí (verificado) | Sí — SDK, white-label y deep link (verificado) | Por verificar | Por verificar | En investigación — prioritario |
 | [SumUp](sumup.md) | Sí (verificado) | Por verificar (solo app propia en docs públicas) | Por verificar | Por verificar | En investigación |
 | [Redeban](redeban.md) | Sí (verificado) | Por verificar (app propia) | Por verificar | Por verificar | En investigación |
@@ -70,7 +70,9 @@ el proceso de vinculación.
 ## Tareas relacionadas
 
 - `PAY-001` — investigar proveedores.
-- `PAY-002` — solicitar documentación, SDK y sandbox.
+- `PAY-002` — solicitar documentación, SDK y sandbox. Contactos verificados,
+  borradores de correo y vía de auto-servicio de Credibanco en
+  [`PAY-002-contacto.md`](PAY-002-contacto.md).
 - `PAY-003` — confirmar dispositivos compatibles.
 - `PAY-004` — validar certificaciones.
 - `PAY-005` — definir modelo comercial.

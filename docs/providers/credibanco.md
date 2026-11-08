@@ -3,7 +3,13 @@
 - **Estado:** En investigación
 - **Última actualización:** 2026-11-07
 - **Responsable:** Equipo PostAi
-- **Contacto comercial:** _(pendiente — solicitar en PAY-002)_
+- **Contacto comercial:** atrecom@credibanco.com · 601 3278690 ·
+  018000975806 (verificado 2026-11-07). Ver borradores y auto-servicio en
+  [`PAY-002-contacto.md`](PAY-002-contacto.md).
+- **Portal de desarrolladores (auto-servicio con sandbox):**
+  <https://developer.credibanco.com/tap-to-phone> — registro propio que entrega
+  Client ID/Secret, token SSO, sandbox y Swaggers de "Creación de terminales" y
+  "Consulta de Transacciones" (API REST; el SDK Android queda bajo acuerdo).
 
 Adquirente/procesador colombiano (Bogotá) que ofrece "Tap to Phone" para
 convertir un Android en terminal de aceptación. Es el candidato con mejor encaje
@@ -21,8 +27,8 @@ propias".
 | Dispositivos compatibles | Smartphones Android con NFC (sin lista de modelos publicada) | [credibanco.com](https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/) | 2026-11-07 |
 | Requisitos de NFC/hardware | NFC obligatorio — "Admite pagos únicamente con tecnología NFC" | [credibanco.com](https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/) | 2026-11-07 |
 | Certificaciones (PCI MPoC u otras) | Por verificar — la página no detalla el estado PCI | — | — |
-| Documentación técnica | Por verificar — no pública (solicitar bajo acuerdo) | — | — |
-| Sandbox | Por verificar | — | — |
+| Documentación técnica | API REST pública en el marketplace (Swaggers + PDF); SDK Android bajo acuerdo | [developer.credibanco.com](https://developer.credibanco.com/tap-to-phone) | 2026-11-07 |
+| Sandbox | Sí — sandbox del marketplace con registro propio (Client ID/Secret, token SSO) | [developer.credibanco.com](https://developer.credibanco.com/tap-to-phone) | 2026-11-07 |
 | Onboarding del comercio | Por verificar (white-label "minimiza tiempos de implementación") | [credibanco.com](https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/) | 2026-11-07 |
 | Costos y comisiones | Por verificar — no publicado | — | — |
 | Notificación de estados | Por verificar | — | — |

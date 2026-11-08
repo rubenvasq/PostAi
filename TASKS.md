@@ -5,7 +5,9 @@ Estados: `Pendiente`, `En curso`, `En revisión`, `Bloqueada`, `Hecho`,
 
 ## En curso
 
-_(nada por ahora)_
+| ID | Tarea | Estado | Nota |
+| --- | --- | --- | --- |
+| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Falta que una persona registre la cuenta y envíe los correos. |
 
 ## En revisión
 
@@ -18,7 +20,6 @@ _(nada por ahora)_
 | ID | Tarea | Estado | Depende de |
 | --- | --- | --- | --- |
 | ARQ-001 | Decidir stack móvil y registrar ADR-001 | Pendiente | investigación SDK |
-| PAY-002 | Solicitar documentación, SDK y sandbox | Pendiente | PAY-001 |
 | PAY-003 | Confirmar dispositivos Android compatibles | Pendiente | PAY-001 |
 | PAY-004 | Validar certificaciones (PCI MPoC cuando aplique) | Pendiente | PAY-001 |
 | PAY-005 | Definir modelo comercial: comisiones, planes, liquidaciones | Pendiente | PAY-001 |

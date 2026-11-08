@@ -3,7 +3,9 @@
 - **Estado:** En investigación
 - **Última actualización:** 2026-11-07
 - **Responsable:** Equipo PostAi
-- **Contacto comercial:** _(pendiente — solicitar en PAY-002)_
+- **Contacto comercial:** sales@symbiotic.com (verificado 2026-11-07). Borrador
+  de correo en [`PAY-002-contacto.md`](PAY-002-contacto.md). Sin auto-servicio
+  público; SDK vía acuerdo (modelo B2B2C).
 
 Habilitador de aceptación de pagos (payment acceptance platform) fundado en
 Costa Rica en 2016, con operación en LATAM y España. Ofrece Tap on Phone
