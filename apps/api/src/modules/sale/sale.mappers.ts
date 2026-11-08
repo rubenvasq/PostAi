@@ -4,6 +4,8 @@ import type {
   PaymentRecord,
   PaymentStatusValue,
   ReceiptContext,
+  RefundRecord,
+  RefundStatusValue,
   SaleItemRecord,
   SaleRecord,
   SaleStatusValue,
@@ -45,6 +47,18 @@ export interface PublicPayment {
   failureCode: string | null;
   failureMessage: string | null;
   refunded: string;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+export interface PublicRefund {
+  id: string;
+  paymentId: string;
+  status: RefundStatusValue;
+  amount: string;
+  currency: string;
+  reason: string | null;
+  providerRefundId: string | null;
   approvedAt: string | null;
   createdAt: string;
 }
@@ -132,6 +146,20 @@ export function toPublicPayment(payment: PaymentRecord): PublicPayment {
     refunded: payment.refundedMinor.toString(),
     approvedAt: payment.approvedAt?.toISOString() ?? null,
     createdAt: payment.createdAt.toISOString(),
+  };
+}
+
+export function toPublicRefund(refund: RefundRecord): PublicRefund {
+  return {
+    id: refund.id,
+    paymentId: refund.paymentId,
+    status: refund.status,
+    amount: refund.amountMinor.toString(),
+    currency: refund.currency,
+    reason: refund.reason,
+    providerRefundId: refund.providerRefundId,
+    approvedAt: refund.approvedAt?.toISOString() ?? null,
+    createdAt: refund.createdAt.toISOString(),
   };
 }
 

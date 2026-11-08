@@ -31,6 +31,7 @@ import type {
   Paginated,
   PaymentMethodRecord,
   PaymentRecord,
+  RefundRecord,
   SaleItemRecord,
   SaleProductRecord,
   SaleRecord,
@@ -368,6 +369,15 @@ class InMemorySaleRepository implements SaleRepository {
     return [];
   }
   async createPayment(_input: CreatePaymentInput): Promise<PaymentRecord> {
+    throw new SaleNotFoundError();
+  }
+  async findRefundByIdempotencyKey(): Promise<RefundRecord | null> {
+    return null;
+  }
+  async listRefundsByPayment(): Promise<RefundRecord[]> {
+    return [];
+  }
+  async createRefund(): Promise<RefundRecord> {
     throw new SaleNotFoundError();
   }
 }

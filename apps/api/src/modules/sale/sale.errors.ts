@@ -26,6 +26,34 @@ export class PaymentAmountMismatchError extends Error {
   }
 }
 
+export class PaymentNotFoundError extends Error {
+  constructor() {
+    super("Pago no encontrado");
+    this.name = "PaymentNotFoundError";
+  }
+}
+
+export class RefundNotAllowedError extends Error {
+  constructor(message = "El pago no admite reembolsos en su estado actual") {
+    super(message);
+    this.name = "RefundNotAllowedError";
+  }
+}
+
+export class RefundAmountInvalidError extends Error {
+  constructor(message = "El importe del reembolso debe ser igual al saldo del pago") {
+    super(message);
+    this.name = "RefundAmountInvalidError";
+  }
+}
+
+export class RefundProviderUnsupportedError extends Error {
+  constructor() {
+    super("El reembolso con SoftPOS real todavía no está disponible");
+    this.name = "RefundProviderUnsupportedError";
+  }
+}
+
 export class PaymentIdempotencyConflictError extends Error {
   constructor() {
     super("La clave de idempotencia ya fue usada en otra operación");

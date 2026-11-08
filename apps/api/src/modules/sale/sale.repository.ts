@@ -4,12 +4,16 @@ import { InsufficientStockError } from "../inventory/inventory.errors.js";
 import {
   PaymentAlreadyExistsError,
   PaymentAmountMismatchError,
+  PaymentNotFoundError,
+  RefundAmountInvalidError,
+  RefundNotAllowedError,
   SaleNotPayableError,
   SaleNotFoundError,
 } from "./sale.errors.js";
 import type {
   BranchRecord,
   CreatePaymentInput,
+  CreateRefundInput,
   CreateSaleInput,
   ListSalesParams,
   Paginated,
@@ -18,6 +22,8 @@ import type {
   PaymentRecord,
   PaymentStatusValue,
   ReceiptContext,
+  RefundRecord,
+  RefundStatusValue,
   SaleItemRecord,
   SaleProductRecord,
   SaleRecord,
@@ -66,8 +72,35 @@ const SALE_SELECT = {
   payments: { orderBy: { createdAt: "asc" }, select: PAYMENT_SELECT },
 } as const;
 
+const REFUND_SELECT = {
+  id: true,
+  paymentId: true,
+  status: true,
+  amountMinor: true,
+  currency: true,
+  reason: true,
+  providerRefundId: true,
+  approvedAt: true,
+  createdAt: true,
+} as const;
+
 type SaleRow = Prisma.SaleGetPayload<{ select: typeof SALE_SELECT }>;
 type PaymentRow = Prisma.PaymentGetPayload<{ select: typeof PAYMENT_SELECT }>;
+type RefundRow = Prisma.RefundGetPayload<{ select: typeof REFUND_SELECT }>;
+
+function toRefundRecord(row: RefundRow): RefundRecord {
+  return {
+    id: row.id,
+    paymentId: row.paymentId,
+    status: row.status as RefundStatusValue,
+    amountMinor: row.amountMinor,
+    currency: row.currency,
+    reason: row.reason,
+    providerRefundId: row.providerRefundId,
+    approvedAt: row.approvedAt,
+    createdAt: row.createdAt,
+  };
+}
 
 const PAYABLE_STATUSES: SaleStatusValue[] = ["DRAFT", "PENDING_PAYMENT"];
 
@@ -554,6 +587,159 @@ export class PrismaSaleRepository implements SaleRepository {
 
         if (isIdempotencyConflict(error)) {
           const existing = await this.findPaymentByIdempotencyKey(
+            input.merchantId,
+            input.idempotencyKey,
+          );
+          if (existing) return existing;
+        }
+
+        throw error;
+      }
+    }
+  }
+
+  findRefundByIdempotencyKey(merchantId: string, key: string): Promise<RefundRecord | null> {
+    return this.db.refund
+      .findUnique({
+        where: { merchantId_idempotencyKey: { merchantId, idempotencyKey: key } },
+        select: REFUND_SELECT,
+      })
+      .then((row) => (row ? toRefundRecord(row) : null));
+  }
+
+  async listRefundsByPayment(merchantId: string, paymentId: string): Promise<RefundRecord[]> {
+    const rows = await this.db.refund.findMany({
+      where: { merchantId, paymentId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: REFUND_SELECT,
+    });
+
+    return rows.map(toRefundRecord);
+  }
+
+  async createRefund(input: CreateRefundInput): Promise<RefundRecord> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.db.$transaction(
+          async (tx) => {
+            const payment = await tx.payment.findFirst({
+              where: { id: input.paymentId, merchantId: input.merchantId },
+              select: {
+                id: true,
+                saleId: true,
+                status: true,
+                amountMinor: true,
+                refundedMinor: true,
+                method: { select: { requiresProvider: true } },
+              },
+            });
+
+            if (!payment) throw new PaymentNotFoundError();
+            if (payment.method.requiresProvider) throw new RefundNotAllowedError();
+            if (payment.status !== "APPROVED") throw new RefundNotAllowedError();
+
+            const remaining = payment.amountMinor - payment.refundedMinor;
+            if (remaining <= 0n) {
+              throw new RefundNotAllowedError("El pago ya fue reembolsado por completo");
+            }
+            // MVP: solo reembolsos totales del saldo pendiente.
+            if (input.amountMinor !== remaining) throw new RefundAmountInvalidError();
+
+            const now = new Date();
+
+            const refund = await tx.refund.create({
+              data: {
+                merchantId: input.merchantId,
+                paymentId: payment.id,
+                status: "APPROVED",
+                amountMinor: input.amountMinor,
+                reason: input.reason,
+                idempotencyKey: input.idempotencyKey,
+                createdByUserId: input.createdByUserId,
+                approvedAt: now,
+              },
+              select: REFUND_SELECT,
+            });
+
+            await tx.payment.update({
+              where: { id: payment.id },
+              data: {
+                refundedMinor: { increment: input.amountMinor },
+                status: "REFUNDED",
+              },
+            });
+
+            const sale = await tx.sale.findUnique({
+              where: { id: payment.saleId },
+              select: {
+                id: true,
+                branchId: true,
+                totalMinor: true,
+                refundedMinor: true,
+                items: { select: { productId: true, quantity: true } },
+              },
+            });
+
+            if (sale) {
+              const nextRefunded = sale.refundedMinor + input.amountMinor;
+              await tx.sale.update({
+                where: { id: sale.id },
+                data: {
+                  refundedMinor: { increment: input.amountMinor },
+                  status: nextRefunded >= sale.totalMinor ? "REFUNDED" : "PARTIALLY_REFUNDED",
+                },
+              });
+
+              // Reponer inventario descontado al vender productos controlados.
+              for (const item of sale.items) {
+                const product = await tx.product.findUnique({
+                  where: { id: item.productId },
+                  select: { type: true, trackInventory: true },
+                });
+
+                if (!product?.trackInventory || product.type !== "PRODUCT") continue;
+
+                const current = await tx.inventoryItem.findUnique({
+                  where: {
+                    branchId_productId: { branchId: sale.branchId, productId: item.productId },
+                  },
+                });
+
+                if (!current) continue;
+
+                const updated = await tx.inventoryItem.update({
+                  where: { id: current.id },
+                  data: { quantity: { increment: item.quantity } },
+                });
+
+                await tx.inventoryMovement.create({
+                  data: {
+                    merchantId: input.merchantId,
+                    branchId: sale.branchId,
+                    inventoryItemId: current.id,
+                    type: "RETURN",
+                    quantityDelta: item.quantity,
+                    previousQuantity: current.quantity,
+                    newQuantity: updated.quantity,
+                    referenceType: "REFUND",
+                    referenceId: refund.id,
+                    createdByUserId: input.createdByUserId,
+                  },
+                });
+              }
+            }
+
+            return toRefundRecord(refund);
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        if (isSerializationFailure(error) && attempt < 2) {
+          continue;
+        }
+
+        if (isIdempotencyConflict(error)) {
+          const existing = await this.findRefundByIdempotencyKey(
             input.merchantId,
             input.idempotencyKey,
           );

@@ -199,6 +199,21 @@ export interface PublicSale {
   cancelledAt: string | null;
 }
 
+export type RefundStatus =
+  "CREATED" | "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+export interface PublicRefund {
+  id: string;
+  paymentId: string;
+  status: RefundStatus;
+  amount: string;
+  currency: string;
+  reason: string | null;
+  providerRefundId: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
 export interface PublicPaymentMethod {
   id: string;
   code: string;

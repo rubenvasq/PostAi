@@ -1,4 +1,4 @@
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Undo2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ErrorState, LoadingState } from "@/components/DataState";
 import { PageHeader } from "@/components/PageHeader";
@@ -6,9 +6,10 @@ import { PaymentStatusBadge, SaleStatusBadge, SimulatedBadge } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Table, TableWrap, Td, Th } from "@/components/ui/table";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getCustomer, getReceipt, getSale } from "@/lib/api";
+import { createRefund, getCustomer, getReceipt, getSale, listRefunds } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import {
   formatDateTime,
@@ -17,17 +18,23 @@ import {
   paymentMethodLabel,
   shortId,
 } from "@/lib/format";
-import type { PublicCustomer, Receipt } from "@/lib/types";
+import type { PublicCustomer, PublicRefund, Receipt } from "@/lib/types";
 
 interface SaleDetailData {
   sale: Awaited<ReturnType<typeof getSale>>;
   receipt: Receipt | null;
   receiptError: string | null;
   customer: PublicCustomer | null;
+  refunds: PublicRefund[];
 }
 
 export function SaleDetailPage({ saleId }: { saleId: string }) {
   const [printed, setPrinted] = useState(false);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundError, setRefundError] = useState<string | null>(null);
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+
   const state = useAsyncData<SaleDetailData>(async () => {
     const sale = await getSale(saleId);
     const hasApprovedPayment = sale.payments.some((payment) => payment.status === "APPROVED");
@@ -52,8 +59,44 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
       }
     }
 
-    return { sale, receipt, receiptError, customer };
+    const refundLists = await Promise.all(
+      sale.payments.map(async (payment) => {
+        try {
+          return (await listRefunds(payment.id)).data;
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const refunds = refundLists.flat();
+
+    return { sale, receipt, receiptError, customer, refunds };
   }, [saleId]);
+
+  function startRefund(paymentId: string) {
+    setRefundingId(paymentId);
+    setRefundReason("");
+    setRefundError(null);
+  }
+
+  async function submitRefund(paymentId: string, amount: string) {
+    setRefundSubmitting(true);
+    setRefundError(null);
+
+    try {
+      await createRefund(paymentId, {
+        amount,
+        reason: refundReason.trim() ? refundReason.trim() : undefined,
+      });
+      setRefundingId(null);
+      setRefundReason("");
+      await state.reload();
+    } catch (error) {
+      setRefundError(errorMessage(error));
+    } finally {
+      setRefundSubmitting(false);
+    }
+  }
 
   if (state.loading && !state.data) {
     return <LoadingState label="Cargando venta…" />;
@@ -75,8 +118,14 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
     return null;
   }
 
-  const { sale, receipt, receiptError, customer } = state.data;
+  const { sale, receipt, receiptError, customer, refunds } = state.data;
   const simulated = sale.payments.some((payment) => payment.isSimulated) || receipt?.simulated;
+
+  function refundableAmount(payment: SaleDetailData["sale"]["payments"][number]): bigint {
+    if (payment.status !== "APPROVED") return 0n;
+    if (payment.methodCode === "CARD_SOFTPOS") return 0n;
+    return BigInt(payment.amount) - BigInt(payment.refunded);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -228,32 +277,123 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
                   <Th className="text-right">Importe</Th>
                   <Th>Aprobado</Th>
                   <Th>Detalle</Th>
+                  <Th className="text-right print:hidden">Acciones</Th>
                 </tr>
               </thead>
               <tbody>
-                {sale.payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <Td>
-                      <span className="inline-flex flex-wrap items-center gap-2">
-                        {paymentMethodLabel(payment.methodCode)}
-                        {payment.isSimulated ? <SimulatedBadge /> : null}
-                      </span>
-                    </Td>
-                    <Td>
-                      <PaymentStatusBadge status={payment.status} />
-                    </Td>
-                    <Td className="text-right">{formatMoney(payment.amount, payment.currency)}</Td>
-                    <Td>{formatDateTime(payment.approvedAt)}</Td>
-                    <Td className="text-xs text-slate-400">
-                      {payment.failureMessage ?? payment.failureCode ?? "—"}
-                    </Td>
-                  </tr>
-                ))}
+                {sale.payments.map((payment) => {
+                  const refundable = refundableAmount(payment);
+                  const isRefunding = refundingId === payment.id;
+
+                  return (
+                    <tr key={payment.id}>
+                      <Td>
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          {paymentMethodLabel(payment.methodCode)}
+                          {payment.isSimulated ? <SimulatedBadge /> : null}
+                        </span>
+                      </Td>
+                      <Td>
+                        <PaymentStatusBadge status={payment.status} />
+                      </Td>
+                      <Td className="text-right">
+                        {formatMoney(payment.amount, payment.currency)}
+                      </Td>
+                      <Td>{formatDateTime(payment.approvedAt)}</Td>
+                      <Td className="text-xs text-slate-400">
+                        {payment.failureMessage ?? payment.failureCode ?? "—"}
+                      </Td>
+                      <Td className="text-right print:hidden">
+                        {refundable > 0n ? (
+                          isRefunding ? (
+                            <div className="flex flex-col items-end gap-2">
+                              <Input
+                                value={refundReason}
+                                onChange={(event) => setRefundReason(event.target.value)}
+                                placeholder="Motivo (opcional)"
+                                maxLength={500}
+                                className="w-56"
+                              />
+                              {refundError ? (
+                                <p className="text-xs text-rose-300">{refundError}</p>
+                              ) : null}
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={refundSubmitting}
+                                  onClick={() => setRefundingId(null)}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={refundSubmitting}
+                                  onClick={() => submitRefund(payment.id, refundable.toString())}
+                                >
+                                  {refundSubmitting
+                                    ? "Reembolsando…"
+                                    : `Reembolsar ${formatMoney(refundable.toString(), payment.currency)}`}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => startRefund(payment.id)}
+                            >
+                              <Undo2 className="mr-1 size-3.5" />
+                              Reembolsar
+                            </Button>
+                          )
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </TableWrap>
         )}
       </Card>
+
+      {refunds.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reembolsos</CardTitle>
+            <CardDescription>
+              En el MVP solo se admiten reembolsos totales de pagos sin proveedor.
+            </CardDescription>
+          </CardHeader>
+          <TableWrap>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Estado</Th>
+                  <Th className="text-right">Importe</Th>
+                  <Th>Motivo</Th>
+                  <Th>Registrado</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {refunds.map((refund) => (
+                  <tr key={refund.id}>
+                    <Td>
+                      <PaymentStatusBadge status={refund.status} />
+                    </Td>
+                    <Td className="text-right">{formatMoney(refund.amount, refund.currency)}</Td>
+                    <Td className="text-slate-300">{refund.reason ?? "—"}</Td>
+                    <Td>{formatDateTime(refund.createdAt)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

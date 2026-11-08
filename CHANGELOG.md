@@ -9,6 +9,13 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Añadido
 
+- Reembolsos del MVP (backend y panel): `GET /v1/payments/{paymentId}/refunds`
+  y `POST /v1/payments/{paymentId}/refunds` con reembolso **total** del saldo del
+  pago, idempotencia por `Idempotency-Key`, reposición de inventario de productos
+  controlados (movimiento `RETURN`), actualización de estados de pago y venta a
+  `REFUNDED` y auditoría `payment.refunded`. Solo métodos sin proveedor; SoftPOS
+  real responde `501`. En el panel, acción «Reembolsar» en el detalle de venta y
+  listado de reembolsos registrados.
 - Rate limiting de autenticación: límite de intentos fallidos en `POST
   /v1/auth/login` (por correo e IP) y `POST /v1/auth/refresh` (por IP) con
   ventana deslizante en memoria, respuesta `429 RATE_LIMITED` con `Retry-After`

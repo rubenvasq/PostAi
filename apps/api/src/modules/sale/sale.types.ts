@@ -14,6 +14,9 @@ export type PaymentStatusValue =
 export type PaymentMethodTypeValue =
   "CASH" | "TRANSFER" | "CARD_SOFTPOS" | "CARD_SIMULATED" | "OTHER";
 
+export type RefundStatusValue =
+  "CREATED" | "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
 export interface PaginationMeta {
   page: number;
   pageSize: number;
@@ -108,6 +111,18 @@ export interface PaymentRecord {
   createdAt: Date;
 }
 
+export interface RefundRecord {
+  id: string;
+  paymentId: string;
+  status: RefundStatusValue;
+  amountMinor: bigint;
+  currency: string;
+  reason: string | null;
+  providerRefundId: string | null;
+  approvedAt: Date | null;
+  createdAt: Date;
+}
+
 export interface SaleRecord {
   id: string;
   merchantId: string;
@@ -177,6 +192,15 @@ export interface CreatePaymentInput {
   createdByUserId: string;
 }
 
+export interface CreateRefundInput {
+  merchantId: string;
+  paymentId: string;
+  amountMinor: bigint;
+  reason: string | null;
+  idempotencyKey: string;
+  createdByUserId: string;
+}
+
 export interface SaleRepository {
   findBranch(merchantId: string): Promise<BranchRecord | null>;
   ensurePaymentMethods(merchantId: string): Promise<void>;
@@ -195,4 +219,7 @@ export interface SaleRepository {
   findPayment(merchantId: string, paymentId: string): Promise<PaymentRecord | null>;
   listSalePayments(merchantId: string, saleId: string): Promise<PaymentRecord[]>;
   createPayment(input: CreatePaymentInput): Promise<PaymentRecord>;
+  findRefundByIdempotencyKey(merchantId: string, key: string): Promise<RefundRecord | null>;
+  listRefundsByPayment(merchantId: string, paymentId: string): Promise<RefundRecord[]>;
+  createRefund(input: CreateRefundInput): Promise<RefundRecord>;
 }

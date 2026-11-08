@@ -14,6 +14,7 @@ import type {
   PublicMerchant,
   PublicPaymentMethod,
   PublicProduct,
+  PublicRefund,
   PublicSale,
   PublicTaxRate,
   Receipt,
@@ -34,6 +35,8 @@ interface ApiRequestOptions {
   auth?: boolean;
   /** Si es `false`, no se envía `X-Merchant-Id`. */
   merchantScoped?: boolean;
+  /** Cabeceras adicionales (p. ej. `Idempotency-Key`). */
+  headers?: Record<string, string>;
 }
 
 export class ApiError extends Error {
@@ -100,6 +103,12 @@ async function send(path: string, options: ApiRequestOptions): Promise<Response>
   }
 
   headers.set("X-Device-Name", DEVICE_NAME);
+
+  if (options.headers) {
+    for (const [key, value] of Object.entries(options.headers)) {
+      headers.set(key, value);
+    }
+  }
 
   return fetch(`${API_BASE}${path}`, {
     method: options.method ?? "GET",
@@ -420,6 +429,21 @@ export function getReceipt(id: string): Promise<Receipt> {
 
 export function listPaymentMethods(): Promise<{ data: PublicPaymentMethod[] }> {
   return apiFetch<{ data: PublicPaymentMethod[] }>("/v1/payment-methods");
+}
+
+export function listRefunds(paymentId: string): Promise<{ data: PublicRefund[] }> {
+  return apiFetch<{ data: PublicRefund[] }>(`/v1/payments/${paymentId}/refunds`);
+}
+
+export function createRefund(
+  paymentId: string,
+  body: { amount: string; reason?: string },
+): Promise<PublicRefund> {
+  return apiFetch<PublicRefund>(`/v1/payments/${paymentId}/refunds`, {
+    method: "POST",
+    body,
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+  });
 }
 
 // ---------------------------------------------------------------------------

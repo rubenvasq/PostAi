@@ -7,21 +7,27 @@ import type { MerchantContext } from "../merchant/merchant.types.js";
 import {
   PaymentAlreadyExistsError,
   PaymentAmountMismatchError,
+  PaymentNotFoundError,
+  RefundAmountInvalidError,
+  RefundNotAllowedError,
   SaleNotPayableError,
   SaleNotFoundError,
 } from "./sale.errors.js";
 import {
   toPublicPayment,
   toPublicPaymentMethod,
+  toPublicRefund,
   toPublicSale,
   toReceipt,
   type PublicPayment,
   type PublicPaymentMethod,
+  type PublicRefund,
   type PublicSale,
   type Receipt,
 } from "./sale.mappers.js";
 import type {
   paymentCreateSchema,
+  refundCreateSchema,
   saleCancelSchema,
   saleCreateSchema,
   saleListQuerySchema,
@@ -37,6 +43,7 @@ import type {
 type SaleCreate = z.infer<typeof saleCreateSchema>;
 type SaleListQuery = z.infer<typeof saleListQuerySchema>;
 type PaymentCreate = z.infer<typeof paymentCreateSchema>;
+type RefundCreate = z.infer<typeof refundCreateSchema>;
 type SaleCancel = z.infer<typeof saleCancelSchema>;
 
 const PAYABLE_STATUSES: SaleStatusValue[] = ["DRAFT", "PENDING_PAYMENT"];
@@ -94,6 +101,14 @@ export interface SaleService {
     idempotencyKey: string,
   ): Promise<PublicPayment>;
   getPayment(context: MerchantContext, paymentId: string): Promise<PublicPayment>;
+  listRefunds(context: MerchantContext, paymentId: string): Promise<PublicRefund[]>;
+  createRefund(
+    context: MerchantContext,
+    paymentId: string,
+    userId: string,
+    input: RefundCreate,
+    idempotencyKey: string,
+  ): Promise<PublicRefund>;
 }
 
 export function createSaleService(
@@ -481,6 +496,110 @@ export function createSaleService(
       }
 
       return toPublicPayment(payment);
+    },
+
+    async listRefunds(context, paymentId) {
+      const payment = await repository.findPayment(context.merchantId, paymentId);
+
+      if (!payment) {
+        throw new AppError(404, "NOT_FOUND", "Pago no encontrado");
+      }
+
+      const refunds = await repository.listRefundsByPayment(context.merchantId, paymentId);
+      return refunds.map(toPublicRefund);
+    },
+
+    async createRefund(context, paymentId, userId, input, idempotencyKey) {
+      const existing = await repository.findRefundByIdempotencyKey(
+        context.merchantId,
+        idempotencyKey,
+      );
+
+      if (existing) {
+        if (existing.paymentId !== paymentId) {
+          throw new AppError(
+            409,
+            "CONFLICT",
+            "La clave de idempotencia ya fue usada en otro reembolso",
+          );
+        }
+        return toPublicRefund(existing);
+      }
+
+      const payment = await repository.findPayment(context.merchantId, paymentId);
+
+      if (!payment) {
+        throw new AppError(404, "NOT_FOUND", "Pago no encontrado");
+      }
+
+      if (payment.methodType === "CARD_SOFTPOS") {
+        throw new AppError(
+          501,
+          "NOT_IMPLEMENTED",
+          "El reembolso con SoftPOS real todavía no está disponible",
+        );
+      }
+
+      if (payment.status !== "APPROVED") {
+        throw new AppError(409, "CONFLICT", "Solo se pueden reembolsar pagos aprobados");
+      }
+
+      const remaining = payment.amountMinor - payment.refundedMinor;
+
+      if (remaining <= 0n) {
+        throw new AppError(409, "CONFLICT", "El pago ya fue reembolsado por completo");
+      }
+
+      const amountMinor = BigInt(input.amount);
+
+      if (amountMinor !== remaining) {
+        throw new AppError(
+          422,
+          "UNPROCESSABLE_ENTITY",
+          "En el MVP solo se admiten reembolsos totales del saldo del pago",
+        );
+      }
+
+      try {
+        const refund = await repository.createRefund({
+          merchantId: context.merchantId,
+          paymentId,
+          amountMinor,
+          reason: input.reason ?? null,
+          idempotencyKey,
+          createdByUserId: userId,
+        });
+
+        await recordAudit({
+          merchantId: context.merchantId,
+          actorUserId: userId,
+          action: "payment.refunded",
+          entityType: "Refund",
+          entityId: refund.id,
+          metadata: {
+            paymentId,
+            saleId: payment.saleId,
+            amount: refund.amountMinor.toString(),
+          },
+        });
+
+        return toPublicRefund(refund);
+      } catch (error) {
+        if (error instanceof PaymentNotFoundError) {
+          throw new AppError(404, "NOT_FOUND", "Pago no encontrado");
+        }
+        if (error instanceof RefundNotAllowedError) {
+          throw new AppError(409, "CONFLICT", error.message);
+        }
+        if (error instanceof RefundAmountInvalidError) {
+          throw new AppError(
+            422,
+            "UNPROCESSABLE_ENTITY",
+            "En el MVP solo se admiten reembolsos totales del saldo del pago",
+          );
+        }
+        throw error;
+      }
     },
   };
 }

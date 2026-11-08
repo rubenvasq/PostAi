@@ -74,6 +74,11 @@ export const paymentCreateSchema = z.object({
   notes: optionalText(500),
 });
 
+export const refundCreateSchema = z.object({
+  amount: money,
+  reason: optionalText(500),
+});
+
 export const saleCancelSchema = z
   .object({
     reason: optionalText(500),
@@ -85,4 +90,5 @@ export const idempotencyKeySchema = z.uuid("La cabecera Idempotency-Key debe ser
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 export type SaleListQuery = z.infer<typeof saleListQuerySchema>;
 export type PaymentCreateInput = z.infer<typeof paymentCreateSchema>;
+export type RefundCreateInput = z.infer<typeof refundCreateSchema>;
 export type SaleCancelInput = z.infer<typeof saleCancelSchema>;

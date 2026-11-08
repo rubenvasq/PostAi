@@ -13,6 +13,9 @@ import type {
 import {
   PaymentAlreadyExistsError,
   PaymentAmountMismatchError,
+  PaymentNotFoundError,
+  RefundAmountInvalidError,
+  RefundNotAllowedError,
   SaleNotPayableError,
   SaleNotFoundError,
 } from "../src/modules/sale/sale.errors.js";
@@ -20,11 +23,13 @@ import { createSaleService } from "../src/modules/sale/sale.service.js";
 import type {
   BranchRecord,
   CreatePaymentInput,
+  CreateRefundInput,
   CreateSaleInput,
   ListSalesParams,
   Paginated,
   PaymentMethodRecord,
   PaymentRecord,
+  RefundRecord,
   SaleItemRecord,
   SaleProductRecord,
   SaleRecord,
@@ -145,6 +150,8 @@ class InMemorySaleRepository implements SaleRepository {
   inventory: StoredInventory[] = [];
   movements: StoredMovement[] = [];
   paymentKeys = new Map<string, string>();
+  refunds: RefundRecord[] = [];
+  refundKeys = new Map<string, string>();
 
   async findBranch(merchantId: string): Promise<BranchRecord | null> {
     return merchantId === MERCHANT_ID ? { id: BRANCH_ID } : null;
@@ -373,6 +380,87 @@ class InMemorySaleRepository implements SaleRepository {
     this.paymentKeys.set(`${input.merchantId}:${input.idempotencyKey}`, payment.id);
 
     return payment;
+  }
+
+  async findRefundByIdempotencyKey(merchantId: string, key: string): Promise<RefundRecord | null> {
+    const refundId = this.refundKeys.get(`${merchantId}:${key}`);
+    if (!refundId) return null;
+    return this.refunds.find((refund) => refund.id === refundId) ?? null;
+  }
+
+  async listRefundsByPayment(merchantId: string, paymentId: string): Promise<RefundRecord[]> {
+    const sale = this.sales.find(
+      (candidate) =>
+        candidate.merchantId === merchantId &&
+        candidate.payments.some((payment) => payment.id === paymentId),
+    );
+    if (!sale) return [];
+    return this.refunds.filter((refund) => refund.paymentId === paymentId);
+  }
+
+  async createRefund(input: CreateRefundInput): Promise<RefundRecord> {
+    const existing = await this.findRefundByIdempotencyKey(input.merchantId, input.idempotencyKey);
+    if (existing) return existing;
+
+    const sale = this.sales.find(
+      (candidate) =>
+        candidate.merchantId === input.merchantId &&
+        candidate.payments.some((payment) => payment.id === input.paymentId),
+    );
+    const payment = sale?.payments.find((candidate) => candidate.id === input.paymentId);
+    if (!sale || !payment) throw new PaymentNotFoundError();
+    if (payment.methodType === "CARD_SOFTPOS") throw new RefundNotAllowedError();
+    if (payment.status !== "APPROVED") throw new RefundNotAllowedError();
+
+    const remaining = payment.amountMinor - payment.refundedMinor;
+    if (remaining <= 0n) throw new RefundNotAllowedError("El pago ya fue reembolsado por completo");
+    if (input.amountMinor !== remaining) throw new RefundAmountInvalidError();
+
+    const now = new Date();
+    const refund: RefundRecord = {
+      id: randomUUID(),
+      paymentId: payment.id,
+      status: "APPROVED",
+      amountMinor: input.amountMinor,
+      currency: payment.currency,
+      reason: input.reason,
+      providerRefundId: null,
+      approvedAt: now,
+      createdAt: now,
+    };
+
+    payment.refundedMinor += input.amountMinor;
+    payment.status = "REFUNDED";
+
+    sale.refundedMinor += input.amountMinor;
+    sale.status = sale.refundedMinor >= sale.totalMinor ? "REFUNDED" : "PARTIALLY_REFUNDED";
+
+    for (const item of sale.items) {
+      const product = this.products.find((candidate) => candidate.id === item.productId);
+      if (!product || !product.trackInventory || product.type !== "PRODUCT") continue;
+
+      const stock = this.inventory.find(
+        (candidate) =>
+          candidate.branchId === sale.branchId && candidate.productId === item.productId,
+      );
+      if (!stock) continue;
+
+      const quantity = Number(item.quantity);
+      stock.quantity += quantity;
+      this.movements.push({
+        merchantId: input.merchantId,
+        branchId: sale.branchId,
+        productId: item.productId,
+        type: "RETURN",
+        quantityDelta: String(quantity),
+        referenceType: "REFUND",
+        referenceId: refund.id,
+      });
+    }
+
+    this.refunds.push(refund);
+    this.refundKeys.set(`${input.merchantId}:${input.idempotencyKey}`, refund.id);
+    return refund;
   }
 }
 
@@ -960,5 +1048,169 @@ describe("Ventas y pagos", () => {
 
     expect(firstReceipt.body.receiptNumber).toBe("R-000001");
     expect(secondReceipt.body.receiptNumber).toBe("R-000002");
+  });
+});
+
+describe("Reembolsos", () => {
+  let app: ReturnType<typeof setup>["app"];
+  let repository: InMemorySaleRepository;
+
+  beforeEach(() => {
+    ({ app, repository } = setup());
+  });
+
+  async function paidSale(items: Array<{ productId: string; quantity: number }>) {
+    const sale = await authed(request(app).post("/v1/sales"))
+      .set("Idempotency-Key", randomUUID())
+      .send({ items });
+
+    const payment = await authed(request(app).post(`/v1/sales/${sale.body.id}/payments`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ methodCode: "CASH", amount: sale.body.total });
+
+    return { sale: sale.body, payment: payment.body };
+  }
+
+  it("reembolsa el total, repone inventario y marca venta y pago", async () => {
+    const stockBefore =
+      repository.inventory.find((entry) => entry.productId === COFFEE_ID)?.quantity ?? 0;
+    const { sale, payment } = await paidSale([{ productId: COFFEE_ID, quantity: 2 }]);
+
+    const response = await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: payment.amount, reason: "Cliente devolvió el producto" });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      paymentId: payment.id,
+      status: "APPROVED",
+      amount: payment.amount,
+      reason: "Cliente devolvió el producto",
+    });
+
+    const stockAfter =
+      repository.inventory.find((entry) => entry.productId === COFFEE_ID)?.quantity ?? 0;
+    expect(stockAfter).toBe(stockBefore);
+
+    const detail = await authed(request(app).get(`/v1/sales/${sale.id}`));
+    expect(detail.body.status).toBe("REFUNDED");
+    expect(detail.body.refunded).toBe(payment.amount);
+    expect(detail.body.payments[0]).toMatchObject({
+      status: "REFUNDED",
+      refunded: payment.amount,
+    });
+  });
+
+  it("lista los reembolsos del pago", async () => {
+    const { payment } = await paidSale([{ productId: DELIVERY_ID, quantity: 1 }]);
+
+    await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: payment.amount });
+
+    const list = await authed(request(app).get(`/v1/payments/${payment.id}/refunds`));
+    expect(list.status).toBe(200);
+    expect(list.body.data).toHaveLength(1);
+    expect(list.body.data[0]).toMatchObject({ paymentId: payment.id, status: "APPROVED" });
+  });
+
+  it("es idempotente por clave", async () => {
+    const { payment } = await paidSale([{ productId: DELIVERY_ID, quantity: 1 }]);
+    const key = randomUUID();
+
+    const first = await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", key)
+      .send({ amount: payment.amount });
+    const second = await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", key)
+      .send({ amount: payment.amount });
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(second.body.id).toBe(first.body.id);
+    expect(repository.refunds).toHaveLength(1);
+  });
+
+  it("rechaza un segundo reembolso del mismo pago con 409", async () => {
+    const { payment } = await paidSale([{ productId: DELIVERY_ID, quantity: 1 }]);
+
+    await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: payment.amount });
+
+    const again = await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: payment.amount });
+
+    expect(again.status).toBe(409);
+  });
+
+  it("rechaza importes parciales con 422", async () => {
+    const { payment } = await paidSale([{ productId: DELIVERY_ID, quantity: 1 }]);
+
+    const response = await authed(request(app).post(`/v1/payments/${payment.id}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: "1000" });
+
+    expect(response.status).toBe(422);
+    expect(response.body.error).toMatchObject({ code: "UNPROCESSABLE_ENTITY" });
+  });
+
+  it("responde 404 para un pago inexistente", async () => {
+    const response = await authed(request(app).post(`/v1/payments/${randomUUID()}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: "1000" });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("aísla por comercio: no reembolsa pagos de otro comercio", async () => {
+    const foreignPaymentId = randomUUID();
+    repository.sales.push({
+      id: randomUUID(),
+      merchantId: OTHER_MERCHANT_ID,
+      branchId: randomUUID(),
+      sellerUserId: randomUUID(),
+      customerId: null,
+      status: "PAID",
+      currency: "COP",
+      subtotalMinor: 1_000n,
+      discountMinor: 0n,
+      taxMinor: 0n,
+      totalMinor: 1_000n,
+      refundedMinor: 0n,
+      receiptNumber: "R-X",
+      idempotencyKey: randomUUID(),
+      notes: null,
+      completedAt: new Date(),
+      cancelledAt: null,
+      createdAt: new Date(),
+      items: [],
+      payments: [
+        {
+          id: foreignPaymentId,
+          saleId: randomUUID(),
+          methodCode: "CASH",
+          methodType: "CASH",
+          status: "APPROVED",
+          amountMinor: 1_000n,
+          currency: "COP",
+          isSimulated: false,
+          providerPaymentId: null,
+          failureCode: null,
+          failureMessage: null,
+          notes: null,
+          refundedMinor: 0n,
+          approvedAt: new Date(),
+          createdAt: new Date(),
+        },
+      ],
+    });
+
+    const response = await authed(request(app).post(`/v1/payments/${foreignPaymentId}/refunds`))
+      .set("Idempotency-Key", randomUUID())
+      .send({ amount: "1000" });
+
+    expect(response.status).toBe(404);
   });
 });

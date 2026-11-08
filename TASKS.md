@@ -41,7 +41,6 @@ _(nada por ahora)_
 | PAY-014 | Webhooks y verificación de resultados en backend | Bloqueada | PAY-002, ARQ-003 |
 | PAY-015 | Idempotencia y prevención de cobros duplicados | Bloqueada | PAY-013 |
 | PAY-016 | Conciliación y liquidaciones | Bloqueada | PAY-005, PAY-014 |
-| PAY-017 | Reembolsos, si el proveedor lo permite | Bloqueada | PAY-013 |
 
 ## Bloqueadas
 
@@ -81,6 +80,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | PAY-001 | Investigar proveedores SoftPOS con operación en Colombia y registrar fuentes verificadas: fichas de Credibanco, Symbiotic, SumUp, Redeban y Bold en `docs/providers/`, con tabla de candidatos y criterio de encaje por SDK | 2026-11-07 |
 | SEC-001 | Rate limiting de autenticación: límite de intentos fallidos en `POST /v1/auth/login` (por correo e IP) y `POST /v1/auth/refresh` (por IP), respuesta `429 RATE_LIMITED` con `Retry-After`, configurable por entorno (`ADR-004`) | 2026-11-07 |
 | MVP-012 | Panel web administrativo básico (`apps/admin`): auth con refresh compartido, dashboard, ventas, catálogo, clientes e inventario contra `/v1`, sin cambios de backend (`ADR-009`) | 2026-11-07 |
+| PAY-017 | Reembolsos del MVP (backend y panel): `GET/POST /v1/payments/{paymentId}/refunds`, reembolso total del saldo, idempotente, repone inventario (`RETURN`), estados `REFUNDED`, auditoría `payment.refunded`; solo métodos sin proveedor, SoftPOS real `501`; acción «Reembolsar» en el panel | 2026-11-07 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
@@ -202,16 +202,29 @@ Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
   `Por verificar` y es alcance de `PAY-002` a `PAY-005`.
 - Detalle y fuentes en `docs/providers/` (una ficha por proveedor).
 
+### Criterios cumplidos de `PAY-017`
+
+- [x] `POST /v1/payments/{paymentId}/refunds` reembolsa el total del saldo del
+      pago (`422` ante importes parciales), es idempotente por `Idempotency-Key`
+      y aísla por comercio (`404` para pagos ajenos).
+- [x] Solo métodos sin proveedor; un pago `CARD_SOFTPOS` responde `501` y un pago
+      no aprobado o ya reembolsado responde `409`.
+- [x] El reembolso crea un registro `APPROVED`, actualiza el pago y la venta a
+      `REFUNDED`, repone el inventario de productos controlados con un movimiento
+      `RETURN` y registra la auditoría `payment.refunded`.
+- [x] `GET /v1/payments/{paymentId}/refunds` lista los reembolsos del pago.
+- [x] Panel: acción «Reembolsar» en el detalle de venta con motivo opcional y
+      tabla de reembolsos registrados.
+- [x] Pruebas automáticas en verde (117 pruebas, 7 nuevas), typecheck, lint,
+      `format:check` y build de API y panel en verde.
+
 ## Próxima acción recomendada
 
-1. Implementar reembolsos en backend y panel
-   (`GET/POST /v1/payments/{paymentId}/refunds`, reembolso total en el MVP): el
-   contrato ya está definido y el dashboard ya muestra `REEMBOLSOS`.
-2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
+1. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
    documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
    estado PCI MPoC y el modelo de contratación en Colombia.
-3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+2. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.
-4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+3. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
    `ARQ-004` (contrato interno `PaymentProvider`).

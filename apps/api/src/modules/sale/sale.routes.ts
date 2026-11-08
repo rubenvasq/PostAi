@@ -5,6 +5,7 @@ import { getMerchantContext } from "../../middleware/require-merchant.js";
 import {
   idempotencyKeySchema,
   paymentCreateSchema,
+  refundCreateSchema,
   saleCancelSchema,
   saleCreateSchema,
   saleListQuerySchema,
@@ -95,6 +96,26 @@ export function createSaleRouter(
     const paymentId = idParamSchema.parse(req.params.paymentId);
     const payment = await service.getPayment(getMerchantContext(res), paymentId);
     res.status(200).json(payment);
+  });
+
+  router.get("/payments/:paymentId/refunds", async (req, res) => {
+    const paymentId = idParamSchema.parse(req.params.paymentId);
+    const data = await service.listRefunds(getMerchantContext(res), paymentId);
+    res.status(200).json({ data });
+  });
+
+  router.post("/payments/:paymentId/refunds", async (req, res) => {
+    const paymentId = idParamSchema.parse(req.params.paymentId);
+    const input = refundCreateSchema.parse(req.body);
+    const key = idempotencyKey(req.header("idempotency-key"));
+    const refund = await service.createRefund(
+      getMerchantContext(res),
+      paymentId,
+      getAuthUser(res).id,
+      input,
+      key,
+    );
+    res.status(201).json(refund);
   });
 
   return router;
