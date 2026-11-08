@@ -3,10 +3,11 @@
 Guía de entorno, convenciones y flujo de trabajo del repositorio `postai`, del
 **Equipo PostAi**.
 
-> **Estado:** scaffolding inicial disponible (`INF-001`) y backend con
-> autenticación, comercio, catálogo, clientes e inventario (`MVP-001`,
-> `MVP-002`, `MVP-003`, `MVP-008`, `MVP-009`). La API y el panel web funcionan;
-> la app Android sigue pendiente de `ARQ-001`.
+> **Estado:** scaffolding inicial disponible (`INF-001`), backend del MVP con
+> autenticación, comercio, carrito, catálogo, clientes, inventario, ventas,
+> pagos simulados, dashboard y auditoría, y panel web administrativo
+> implementado (`MVP-012`, en revisión). La app Android sigue pendiente de
+> `ARQ-001`.
 
 ## Identidad del repositorio
 
@@ -140,6 +141,14 @@ El panel web usa un proxy de Vite hacia `http://127.0.0.1:3000` para `/health` y
 
 Los secretos reales no se versionan; `.env` está ignorado por Git. En producción
 la API se niega a arrancar si `JWT_SECRET` conserva el valor de desarrollo.
+
+El panel web solo usa una variable pública:
+
+| Variable | Uso | Valor por defecto |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | URL base de la API | vacío (proxy de Vite a `127.0.0.1:3000`) |
+
+Detalle en [`apps/admin/README.md`](../../apps/admin/README.md).
 
 ## Ramas y commits
 

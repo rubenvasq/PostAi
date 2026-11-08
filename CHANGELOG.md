@@ -94,6 +94,27 @@ versionado se adoptará cuando exista la primera entrega.
 - Publicación inicial en GitHub
   ([`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)) y ejecución correcta
   del CI sobre `main`.
+- Panel web administrativo básico del MVP (`MVP-012`) en `apps/admin`, contra el
+  contrato `/v1` existente y sin cambios de backend:
+  - Login, logout, restauración de sesión y renovación transparente del access
+    token con `POST /v1/auth/refresh`; sesión en `sessionStorage` y selector de
+    comercio activo con `X-Merchant-Id`.
+  - Dashboard con rango de fechas, indicadores de `GET /v1/dashboard/summary` y
+    reporte diario de `GET /v1/reports/sales`.
+  - Historial de ventas con filtros y paginación, detalle de venta, pagos y
+    comprobante imprimible.
+  - Catálogo con CRUD mínimo de productos/servicios, categorías e impuestos,
+    búsqueda y paginación.
+  - Clientes con búsqueda, paginación, alta y edición.
+  - Inventario con stock, filtro de stock bajo, ajustes y movimientos.
+  - Insignias y avisos explícitos para pagos simulados; el panel solo muestra
+    estados calculados por el backend y nunca aprueba pagos.
+  - Cliente de API tipado, manejo del formato de error del contrato y
+    validación de entradas en formularios.
+- ADR-009 con las decisiones de autenticación, sesión, renovación de tokens y
+  navegación por hash del panel web.
+- `apps/admin/README.md` con desarrollo, variables de entorno, rutas, seguridad
+  y limitaciones conocidas.
 
 ### Cambiado
 
@@ -119,10 +140,12 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Notas
 
-- El backend y el panel web tienen scaffolding ejecutable y la API ya expone
-  autenticación, comercio, catálogo, clientes e inventario. La app Android sigue
-  pendiente de la decisión de stack (`ARQ-001`) y el proveedor SoftPOS de
-  `PAY-001`.
+- El backend y el panel web son ejecutables. La API expone autenticación,
+  comercio, carrito, catálogo, clientes, inventario, ventas, pagos simulados,
+  dashboard y auditoría; el panel ya cubre login, dashboard, ventas, catálogo,
+  clientes e inventario (`MVP-012`, pendiente de revisión y verificación manual).
+  La app Android sigue pendiente de la decisión de stack (`ARQ-001`) y el
+  proveedor SoftPOS de `PAY-001`.
 - Las pruebas usan repositorios en memoria; los flujos reales de autenticación,
   comercio, catálogo, clientes e inventario se verificaron manualmente contra
   PostgreSQL. Las pruebas de integración en CI quedan pendientes.
