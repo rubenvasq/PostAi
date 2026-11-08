@@ -15,6 +15,8 @@ Records).
 | [ADR-005](ADR-005-inventario-por-sucursal.md) | Inventario por sucursal y ajustes manuales del MVP | Aceptado |
 | [ADR-006](ADR-006-modelo-terminal-sin-roles.md) | Modelo de terminal sin roles de empleado | Aceptado |
 | [ADR-007](ADR-007-ventas-y-pagos-simulados.md) | Ventas y pagos simulados del MVP | Aceptado |
+| [ADR-008](ADR-008-carrito-y-checkout.md) | Carrito y checkout del MVP | Aceptado |
+| [ADR-009](ADR-009-panel-web-sesion-y-navegacion.md) | Autenticación, estado y navegación del panel web | Aceptado |
 
 ## Convención
 

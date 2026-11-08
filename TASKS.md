@@ -9,7 +9,41 @@ _(nada por ahora)_
 
 ## En revisión
 
-_(nada por ahora)_
+### `MVP-012` — Panel web administrativo básico
+
+Implementado en la rama `feat/mvp-012-panel-admin` contra el contrato `/v1`
+existente, sin cambios de backend. Verificado de extremo a extremo contra
+PostgreSQL 17, la API real y el panel servido por Vite. Pendiente solo de
+revisión del arquitecto antes de fusionar.
+
+- [x] Login contra `POST /v1/auth/login`; logout contra
+      `POST /v1/auth/logout`; sesión en `sessionStorage`.
+- [x] Renovación transparente del access token con `POST /v1/auth/refresh` y
+      una sola promesa compartida ante `401` concurrentes.
+- [x] `X-Merchant-Id` en llamadas con contexto de comercio y selector cuando el
+      usuario tiene varias membresías activas.
+- [x] Dashboard con `GET /v1/dashboard/summary` y `GET /v1/reports/sales`
+      (rango de fechas, ventas por día y pagos por método).
+- [x] Catálogo con CRUD mínimo: productos/servicios, categorías e impuestos,
+      búsqueda y paginación.
+- [x] Clientes con búsqueda, paginación, alta y edición.
+- [x] Inventario con stock, filtro `lowStock`, ajustes y movimientos.
+- [x] Historial de ventas, detalle, pagos y comprobante imprimible.
+- [x] Pagos simulados distinguidos con insignia y aviso explícito; el panel solo
+      muestra estados que calcula el backend.
+- [x] Errores con el formato del contrato y entradas validadas en formularios.
+- [x] `npm run lint`, `npm run typecheck`, build del panel y `format:check` en
+      verde; pruebas de la API en verde (102).
+- [x] Verificación E2E contra PostgreSQL 17, API real y panel en Vite:
+      registro, login, refresh, logout, `me`, comercio, catálogo, clientes,
+      inventario, venta, pago simulado, comprobante, dashboard y reportes.
+- [x] Verificación de UI con navegador headless: login, dashboard, catálogo,
+      clientes, inventario, historial, detalle de venta y aviso de simulado.
+- [ ] Revisión del arquitecto antes de fusionar.
+
+Decisiones registradas en
+[`ADR-009`](docs/architecture/ADR-009-panel-web-sesion-y-navegacion.md).
+Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
 
 ## Pendientes
 
@@ -29,12 +63,6 @@ _(nada por ahora)_
 | ID | Tarea | Estado | Depende de |
 | --- | --- | --- | --- |
 | INF-004 | Configurar app Android según stack elegido | Pendiente | INF-001, ARQ-001 |
-
-### Producto MVP
-
-| ID | Tarea | Estado | Depende de |
-| --- | --- | --- | --- |
-| MVP-012 | Panel web administrativo básico | Pendiente | MVP-002 |
 
 ### Integración SoftPOS
 
@@ -174,18 +202,17 @@ SDK, sandbox y condiciones comerciales para Colombia.
 
 ## Próxima acción recomendada
 
-1. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
+1. Revisar `MVP-012`: levantar PostgreSQL (`npm run db:up`), aplicar
+   migraciones (`npm run db:migrate`), arrancar API y panel, y verificar el flujo
+   completo de login, dashboard, catálogo, clientes, inventario, ventas y
+   comprobante con datos reales.
+2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
    documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
    estado PCI MPoC y el modelo de contratación en Colombia.
-2. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.
-3. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
    `ARQ-004` (contrato interno `PaymentProvider`).
-4. Pendiente operativo: las migraciones `20261107052000_add_device_sessions` y
-   `20261107060000_add_carts` ya están aplicadas y verificadas contra
-   PostgreSQL.
-2. Mantener `PAY-001` en paralelo: investigar proveedores SoftPOS con operación
-   en Colombia y registrar hallazgos verificados en `docs/providers/`.
-3. Añadir rate limiting en login/refresh antes de exponer la API a Internet
+5. Añadir rate limiting en login/refresh antes de exponer la API a Internet
    (ver `ADR-004`).

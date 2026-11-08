@@ -1,72 +1,111 @@
-import { Activity, Store } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Loader2, Store } from "lucide-react";
+import { AuthProvider } from "@/auth/AuthProvider";
+import { useAuth } from "@/auth/useAuth";
+import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-
-type HealthState = { status: "loading" } | { status: "ok"; version?: string } | { status: "error" };
+import { useHashRoute, type Route } from "@/hooks/useHashRoute";
+import { CustomersPage } from "@/pages/CustomersPage";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { InventoryPage } from "@/pages/InventoryPage";
+import { LoginPage } from "@/pages/LoginPage";
+import { ProductsPage } from "@/pages/ProductsPage";
+import { SaleDetailPage } from "@/pages/SaleDetailPage";
+import { SalesPage } from "@/pages/SalesPage";
 
 export function App() {
-  const [health, setHealth] = useState<HealthState>({ status: "loading" });
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
 
-  useEffect(() => {
-    let cancelled = false;
+function AppContent() {
+  const auth = useAuth();
+  const route = useHashRoute();
 
-    fetch("/health")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        return response.json() as Promise<{ status: string; version?: string }>;
-      })
-      .then((data) => {
-        if (!cancelled) {
-          setHealth({ status: "ok", version: data.version });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setHealth({ status: "error" });
-        }
-      });
+  if (auth.status === "loading") {
+    return <FullScreenLoading />;
+  }
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  if (auth.status === "anonymous") {
+    return <LoginPage />;
+  }
+
+  if (!auth.merchantId) {
+    return <NoMerchant />;
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-16">
-        <header className="flex items-center gap-3">
-          <div className="rounded-xl bg-emerald-500/15 p-3 text-emerald-400">
-            <Store className="size-6" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-400">Equipo PostAi</p>
-            <h1 className="text-3xl font-semibold">PostAi — Panel administrativo</h1>
-          </div>
-        </header>
+    <AppShell route={route}>
+      <div key={auth.merchantId}>{renderRoute(route)}</div>
+    </AppShell>
+  );
+}
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <Activity className="size-4" />
-            Estado de la API
-          </div>
+function renderRoute(route: Route) {
+  switch (route.name) {
+    case "dashboard":
+      return <DashboardPage />;
+    case "sales":
+      return <SalesPage />;
+    case "sale-detail":
+      return <SaleDetailPage saleId={route.saleId} />;
+    case "products":
+      return <ProductsPage />;
+    case "customers":
+      return <CustomersPage />;
+    case "inventory":
+      return <InventoryPage />;
+    case "not-found":
+      return (
+        <div className="flex flex-col gap-4">
+          <PageHeader
+            title="Página no encontrada"
+            description={`No existe la ruta "${route.path}".`}
+          />
+          <a href="#/dashboard" className="text-sm text-emerald-400 hover:underline">
+            Volver al dashboard
+          </a>
+        </div>
+      );
+  }
+}
 
-          <p className="mt-3 text-lg" aria-live="polite">
-            {health.status === "loading" && "Comprobando…"}
-            {health.status === "ok" && `Disponible${health.version ? ` · v${health.version}` : ""}`}
-            {health.status === "error" && "No disponible"}
-          </p>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Scaffolding inicial. Los módulos del POS se implementarán en las siguientes tareas.
-          </p>
-
-          <Button className="mt-6" onClick={() => window.location.reload()}>
-            Volver a comprobar
-          </Button>
-        </section>
+function FullScreenLoading() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-300">
+      <div className="flex items-center gap-2 text-emerald-400">
+        <Store className="size-5" />
+        <span className="text-sm font-semibold">PostAi</span>
       </div>
-    </main>
+      <p className="flex items-center gap-2 text-sm text-slate-400">
+        <Loader2 className="size-4 animate-spin" />
+        Restaurando sesión…
+      </p>
+    </div>
+  );
+}
+
+function NoMerchant() {
+  const { logout } = useAuth();
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-center">
+        <div className="mx-auto w-fit rounded-full bg-amber-500/10 p-3 text-amber-400">
+          <Store className="size-5" />
+        </div>
+        <h1 className="mt-4 text-lg font-semibold text-slate-50">Sin comercio activo</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          Tu usuario no tiene una membresía activa en ningún comercio. Contacta al administrador de
+          la cuenta.
+        </p>
+        <Button className="mt-5" variant="outline" onClick={() => void logout()}>
+          Cerrar sesión
+        </Button>
+      </div>
+    </div>
   );
 }
