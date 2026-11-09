@@ -12,6 +12,7 @@ import { createMerchantService } from "../src/modules/merchant/merchant.service.
 import { createReportService } from "../src/modules/report/report.service.js";
 import type {
   ApprovedPaymentRow,
+  OpenCashSessionRow,
   PaidSaleRow,
   ReportRepository,
 } from "../src/modules/report/report.types.js";
@@ -56,6 +57,7 @@ class InMemoryReportRepository implements ReportRepository {
   sales: PaidSaleRow[] = [];
   payments: ApprovedPaymentRow[] = [];
   lowStock = 0;
+  openCashSession: OpenCashSessionRow | null = null;
 
   async getMerchantCurrency(): Promise<string | null> {
     return "COP";
@@ -68,6 +70,9 @@ class InMemoryReportRepository implements ReportRepository {
   }
   async countLowStock(): Promise<number> {
     return this.lowStock;
+  }
+  async findOpenCashSession(): Promise<OpenCashSessionRow | null> {
+    return this.openCashSession;
   }
 }
 
@@ -128,6 +133,22 @@ describe("GET /v1/dashboard/summary", () => {
     const res = await authed(request(app).get("/v1/dashboard/summary"));
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ salesCount: 0, grossSales: "0", averageTicket: "0" });
+  });
+
+  it("incluye la caja abierta cuando existe", async () => {
+    const openedAt = day("2026-11-05T13:00:00Z");
+    const { app } = setup((repo) => {
+      repo.openCashSession = { id: randomUUID(), openedAt, openingAmountMinor: 50000n };
+    });
+
+    const res = await authed(request(app).get("/v1/dashboard/summary"));
+
+    expect(res.status).toBe(200);
+    expect(res.body.openCashSession).toEqual({
+      id: expect.any(String),
+      openedAt: openedAt.toISOString(),
+      openingAmount: "50000",
+    });
   });
 
   it("rechaza un rango invertido con 400", async () => {

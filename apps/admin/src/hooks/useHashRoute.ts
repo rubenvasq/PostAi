@@ -7,6 +7,7 @@ export type Route =
   | { name: "products" }
   | { name: "customers" }
   | { name: "inventory" }
+  | { name: "cash" }
   | { name: "not-found"; path: string };
 
 function parseHash(hash: string): Route {
@@ -36,6 +37,10 @@ function parseHash(hash: string): Route {
 
   if (path === "inventory") {
     return { name: "inventory" };
+  }
+
+  if (path === "cash") {
+    return { name: "cash" };
   }
 
   return { name: "not-found", path };

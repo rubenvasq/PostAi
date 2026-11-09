@@ -44,6 +44,9 @@ import { createReportService, type ReportService } from "./modules/report/report
 import { createAuditRouter } from "./modules/audit/audit.routes.js";
 import { PrismaAuditRepository } from "./modules/audit/audit.repository.js";
 import { createAuditService, type AuditService } from "./modules/audit/audit.service.js";
+import { createCashRouter } from "./modules/cash/cash.routes.js";
+import { PrismaCashRepository } from "./modules/cash/cash.repository.js";
+import { createCashService, type CashService } from "./modules/cash/cash.service.js";
 import { healthRouter } from "./routes/health.js";
 
 export interface AppDependencies {
@@ -57,6 +60,7 @@ export interface AppDependencies {
   cartService?: CartService;
   reportService?: ReportService;
   auditService?: AuditService;
+  cashService?: CashService;
 }
 
 export function createApp(dependencies: AppDependencies = {}) {
@@ -81,6 +85,9 @@ export function createApp(dependencies: AppDependencies = {}) {
     dependencies.cartService ?? createCartService(new PrismaCartRepository(prisma), saleService);
   const reportService =
     dependencies.reportService ?? createReportService(new PrismaReportRepository(prisma));
+  const cashService =
+    dependencies.cashService ??
+    createCashService(new PrismaCashRepository(prisma), (event) => auditService.record(event));
 
   app.disable("x-powered-by");
   app.use(helmet());
@@ -101,6 +108,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.use("/v1", createCartRouter(cartService, requireAuth, requireMerchant));
   app.use("/v1", createReportRouter(reportService, requireAuth, requireMerchant));
   app.use("/v1", createAuditRouter(auditService, requireAuth, requireMerchant));
+  app.use("/v1", createCashRouter(cashService, requireAuth, requireMerchant));
 
   app.use(notFound);
   app.use(errorHandler);

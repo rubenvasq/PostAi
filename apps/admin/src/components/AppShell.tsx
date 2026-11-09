@@ -6,6 +6,7 @@ import {
   ReceiptText,
   Store,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -51,6 +52,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Inventario",
     icon: Boxes,
     matches: (route) => route.name === "inventory",
+  },
+  {
+    route: "cash",
+    label: "Caja y gastos",
+    icon: Wallet,
+    matches: (route) => route.name === "cash",
   },
 ];
 

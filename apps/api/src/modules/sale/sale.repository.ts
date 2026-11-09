@@ -457,6 +457,52 @@ export class PrismaSaleRepository implements SaleRepository {
       .then((row) => (row ? toPaymentRecord(row) : null));
   }
 
+  /**
+   * Registra un movimiento de caja para pagos/reembolsos en efectivo cuando la
+   * sucursal tiene una sesión abierta. Si no hay caja abierta el pago sigue su
+   * curso y no se crea movimiento (el efectivo se controla fuera del MVP).
+   */
+  private async recordCashMovement(
+    tx: Prisma.TransactionClient,
+    context: {
+      merchantId: string;
+      branchId: string;
+      userId: string;
+      type: "SALE" | "REFUND";
+      direction: "IN" | "OUT";
+      amountMinor: bigint;
+      referenceType: string;
+      referenceId: string;
+      description: string;
+    },
+  ): Promise<void> {
+    const session = await tx.cashSession.findFirst({
+      where: {
+        merchantId: context.merchantId,
+        branchId: context.branchId,
+        status: "OPEN",
+      },
+      select: { id: true },
+    });
+
+    if (!session) return;
+
+    await tx.cashMovement.create({
+      data: {
+        merchantId: context.merchantId,
+        branchId: context.branchId,
+        sessionId: session.id,
+        type: context.type,
+        direction: context.direction,
+        amountMinor: context.amountMinor,
+        referenceType: context.referenceType,
+        referenceId: context.referenceId,
+        description: context.description,
+        createdByUserId: context.userId,
+      },
+    });
+  }
+
   findPayment(merchantId: string, paymentId: string): Promise<PaymentRecord | null> {
     return this.db.payment
       .findFirst({ where: { id: paymentId, merchantId }, select: PAYMENT_SELECT })
@@ -559,6 +605,20 @@ export class PrismaSaleRepository implements SaleRepository {
               select: PAYMENT_SELECT,
             });
 
+            if (input.method.type === "CASH") {
+              await this.recordCashMovement(tx, {
+                merchantId: input.merchantId,
+                branchId: sale.branchId,
+                userId: input.createdByUserId,
+                type: "SALE",
+                direction: "IN",
+                amountMinor: input.amountMinor,
+                referenceType: "PAYMENT",
+                referenceId: payment.id,
+                description: "Venta en efectivo",
+              });
+            }
+
             // Número de comprobante legible y secuencial por comercio. La
             // transacción Serializable evita que dos pagos obtengan el mismo
             // número de forma concurrente.
@@ -630,7 +690,7 @@ export class PrismaSaleRepository implements SaleRepository {
                 status: true,
                 amountMinor: true,
                 refundedMinor: true,
-                method: { select: { requiresProvider: true } },
+                method: { select: { requiresProvider: true, type: true } },
               },
             });
 
@@ -689,6 +749,20 @@ export class PrismaSaleRepository implements SaleRepository {
                   status: nextRefunded >= sale.totalMinor ? "REFUNDED" : "PARTIALLY_REFUNDED",
                 },
               });
+
+              if (payment.method.type === "CASH") {
+                await this.recordCashMovement(tx, {
+                  merchantId: input.merchantId,
+                  branchId: sale.branchId,
+                  userId: input.createdByUserId,
+                  type: "REFUND",
+                  direction: "OUT",
+                  amountMinor: input.amountMinor,
+                  referenceType: "REFUND",
+                  referenceId: refund.id,
+                  description: "Reembolso en efectivo",
+                });
+              }
 
               // Reponer inventario descontado al vender productos controlados.
               for (const item of sale.items) {

@@ -1,5 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
-import type { ApprovedPaymentRow, PaidSaleRow, ReportRepository } from "./report.types.js";
+import type {
+  ApprovedPaymentRow,
+  OpenCashSessionRow,
+  PaidSaleRow,
+  ReportRepository,
+} from "./report.types.js";
 
 export class PrismaReportRepository implements ReportRepository {
   constructor(private readonly db: PrismaClient) {}
@@ -61,5 +66,28 @@ export class PrismaReportRepository implements ReportRepository {
         AND quantity <= "lowStockThreshold"
     `;
     return Number(rows[0]?.count ?? 0n);
+  }
+
+  async findOpenCashSession(merchantId: string): Promise<OpenCashSessionRow | null> {
+    const main = await this.db.branch.findFirst({
+      where: { merchantId, code: "MAIN" },
+      select: { id: true },
+    });
+
+    const branch =
+      main ??
+      (await this.db.branch.findFirst({
+        where: { merchantId, isActive: true },
+        orderBy: { code: "asc" },
+        select: { id: true },
+      }));
+
+    if (!branch) return null;
+
+    return this.db.cashSession.findFirst({
+      where: { merchantId, branchId: branch.id, status: "OPEN" },
+      orderBy: { openedAt: "desc" },
+      select: { id: true, openedAt: true, openingAmountMinor: true },
+    });
   }
 }

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useHashRoute, type Route } from "@/hooks/useHashRoute";
 import { CustomersPage } from "@/pages/CustomersPage";
+import { CashPage } from "@/pages/CashPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { InventoryPage } from "@/pages/InventoryPage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -58,6 +59,8 @@ function renderRoute(route: Route) {
       return <CustomersPage />;
     case "inventory":
       return <InventoryPage />;
+    case "cash":
+      return <CashPage />;
     case "not-found":
       return (
         <div className="flex flex-col gap-4">

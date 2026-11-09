@@ -10,9 +10,16 @@ export interface ApprovedPaymentRow {
   occurredAt: Date;
 }
 
+export interface OpenCashSessionRow {
+  id: string;
+  openedAt: Date;
+  openingAmountMinor: bigint;
+}
+
 export interface ReportRepository {
   getMerchantCurrency(merchantId: string): Promise<string | null>;
   listPaidSales(merchantId: string, from: Date, to: Date): Promise<PaidSaleRow[]>;
   listApprovedPayments(merchantId: string, from: Date, to: Date): Promise<ApprovedPaymentRow[]>;
   countLowStock(merchantId: string): Promise<number>;
+  findOpenCashSession(merchantId: string): Promise<OpenCashSessionRow | null>;
 }

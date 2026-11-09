@@ -9,6 +9,18 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Añadido
 
+- Caja y gastos del MVP (`MVP-014`): endpoints `GET/POST
+  /v1/cash/sessions`, `GET /v1/cash/sessions/current`, `POST
+  /v1/cash/sessions/{sessionId}/close`, `GET/POST
+  /v1/cash/sessions/{sessionId}/movements` y `GET/POST /v1/expenses`.
+  Una sola sesión `OPEN` por sucursal (índice único parcial), cierre con
+  efectivo esperado y diferencia, gastos asociados o no a la caja y movimientos
+  automáticos `SALE`/`REFUND` para pagos y reembolsos en efectivo. El dashboard
+  devuelve `openCashSession` y el panel incorpora la página «Caja y gastos».
+  Decisiones en `ADR-010`.
+- Endpoint sandbox de «Botón de pagos» de Credibanco registrado en
+  `docs/providers/credibanco.md` y `PAY-002-contacto.md` (requiere SSO; la raíz
+  responde `403`).
 - Reembolsos del MVP (backend y panel): `GET /v1/payments/{paymentId}/refunds`
   y `POST /v1/payments/{paymentId}/refunds` con reembolso **total** del saldo del
   pago, idempotencia por `Idempotency-Key`, reposición de inventario de productos
@@ -156,10 +168,9 @@ versionado se adoptará cuando exista la primera entrega.
 
 - El backend y el panel web son ejecutables. La API expone autenticación,
   comercio, carrito, catálogo, clientes, inventario, ventas, pagos simulados,
-  dashboard y auditoría; el panel ya cubre login, dashboard, ventas, catálogo,
-  clientes e inventario (`MVP-012`, pendiente de revisión y verificación manual).
-  La app Android sigue pendiente de la decisión de stack (`ARQ-001`) y el
-  proveedor SoftPOS de `PAY-001`.
+  caja, gastos, dashboard y auditoría; el panel cubre login, dashboard, ventas,
+  catálogo, clientes, inventario y caja/gastos. La app Android sigue pendiente de
+  la decisión de stack (`ARQ-001`) y el proveedor SoftPOS de `PAY-001`.
 - Las pruebas usan repositorios en memoria; los flujos reales de autenticación,
   comercio, catálogo, clientes, inventario, ventas, pagos simulados, comprobante,
   dashboard y reportes se verificaron manualmente contra PostgreSQL 17. El panel

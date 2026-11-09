@@ -22,7 +22,7 @@ export interface DashboardSummary {
   averageTicket: string;
   byMethod: Array<{ methodCode: string; count: number; amount: string }>;
   lowStockCount: number;
-  openCashSession: null;
+  openCashSession: { id: string; openedAt: string; openingAmount: string } | null;
 }
 
 export interface SalesReport {
@@ -81,10 +81,11 @@ export function createReportService(repository: ReportRepository): ReportService
   return {
     async getDashboardSummary(context, query) {
       const { from, to } = resolveRange(query.from, query.to);
-      const [{ sales, payments }, currency, lowStockCount] = await Promise.all([
+      const [{ sales, payments }, currency, lowStockCount, openCashSession] = await Promise.all([
         loadData(context.merchantId, from, to),
         repository.getMerchantCurrency(context.merchantId),
         repository.countLowStock(context.merchantId),
+        repository.findOpenCashSession(context.merchantId),
       ]);
 
       const grossSales = sales.reduce((sum, sale) => sum + sale.totalMinor, 0n);
@@ -118,7 +119,13 @@ export function createReportService(repository: ReportRepository): ReportService
           }))
           .sort((left, right) => left.methodCode.localeCompare(right.methodCode)),
         lowStockCount,
-        openCashSession: null,
+        openCashSession: openCashSession
+          ? {
+              id: openCashSession.id,
+              openedAt: openCashSession.openedAt.toISOString(),
+              openingAmount: openCashSession.openingAmountMinor.toString(),
+            }
+          : null,
       };
     },
 

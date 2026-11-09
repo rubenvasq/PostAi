@@ -69,7 +69,8 @@ resolver el comercio activo cuando un usuario tiene varias membresías.
 ### 3. Navegación por hash
 
 - Las rutas son `#/dashboard`, `#/sales`, `#/sales/{saleId}`, `#/products`,
-  `#/customers` y `#/inventory`, resueltas por `hooks/useHashRoute.ts`.
+  `#/customers`, `#/inventory` y `#/cash`, resueltas por
+  `hooks/useHashRoute.ts`.
 - Se usa hash para que el build estático funcione en cualquier servidor sin
   reglas de reescritura y para no agregar un router externo.
 - Una ruta desconocida muestra una pantalla de “no encontrada” con enlace al
@@ -121,9 +122,9 @@ resolver el comercio activo cuando un usuario tiene varias membresías.
   requiere cambios de backend y queda para un incremento posterior.
 - Al cerrar la pestaña se pierde la sesión y hay que iniciar sesión de nuevo.
   Es el comportamiento deseado para el MVP.
-- El panel no incluye caja, carrito ni creación de ventas en esta entrega.
-  El carrito (`MVP-004`) y la operación de caja quedan para incrementos
-  posteriores.
+- El panel no incluyó caja, carrito ni creación de ventas en esa entrega. El
+  carrito (`MVP-004`) y la operación de caja (`ADR-010`) se añadieron en
+  incrementos posteriores.
 - No hay pruebas E2E automatizadas del panel; la verificación es manual contra
   la API y las pruebas automáticas cubren el backend.
 

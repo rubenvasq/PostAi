@@ -3,12 +3,16 @@ import type {
   AuthTokens,
   DashboardSummary,
   LoginResponse,
+  ManualCashMovementType,
   MeResponse,
   Paginated,
   ProductType,
   PublicBranch,
+  PublicCashMovement,
+  PublicCashSession,
   PublicCategory,
   PublicCustomer,
+  PublicExpense,
   PublicInventoryItem,
   PublicInventoryMovement,
   PublicMerchant,
@@ -444,6 +448,84 @@ export function createRefund(
     body,
     headers: { "Idempotency-Key": crypto.randomUUID() },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Caja y gastos
+// ---------------------------------------------------------------------------
+
+export interface CashSessionListParams {
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function getCurrentCashSession(): Promise<PublicCashSession> {
+  return apiFetch<PublicCashSession>("/v1/cash/sessions/current");
+}
+
+export function listCashSessions(
+  params: CashSessionListParams,
+): Promise<Paginated<PublicCashSession>> {
+  return apiFetch<Paginated<PublicCashSession>>(withQuery("/v1/cash/sessions", params));
+}
+
+export function openCashSession(body: {
+  openingAmount: string;
+  notes?: string;
+}): Promise<PublicCashSession> {
+  return apiFetch<PublicCashSession>("/v1/cash/sessions", { method: "POST", body });
+}
+
+export function closeCashSession(
+  sessionId: string,
+  body: { closingAmount: string; notes?: string },
+): Promise<PublicCashSession> {
+  return apiFetch<PublicCashSession>(`/v1/cash/sessions/${sessionId}/close`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function listCashMovements(sessionId: string): Promise<{ data: PublicCashMovement[] }> {
+  return apiFetch<{ data: PublicCashMovement[] }>(`/v1/cash/sessions/${sessionId}/movements`);
+}
+
+export function createCashMovement(
+  sessionId: string,
+  body: {
+    type: ManualCashMovementType;
+    direction: "IN" | "OUT";
+    amount: string;
+    description?: string;
+  },
+): Promise<PublicCashMovement> {
+  return apiFetch<PublicCashMovement>(`/v1/cash/sessions/${sessionId}/movements`, {
+    method: "POST",
+    body,
+  });
+}
+
+export interface ExpenseListParams {
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function listExpenses(params: ExpenseListParams): Promise<Paginated<PublicExpense>> {
+  return apiFetch<Paginated<PublicExpense>>(withQuery("/v1/expenses", params));
+}
+
+export function createExpense(body: {
+  category: string;
+  amount: string;
+  description?: string;
+  incurredAt?: string;
+  sessionId?: string;
+}): Promise<PublicExpense> {
+  return apiFetch<PublicExpense>("/v1/expenses", { method: "POST", body });
 }
 
 // ---------------------------------------------------------------------------

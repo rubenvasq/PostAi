@@ -254,7 +254,52 @@ export interface DashboardSummary {
   averageTicket: string;
   byMethod: Array<{ methodCode: string; count: number; amount: string }>;
   lowStockCount: number;
-  openCashSession: null;
+  openCashSession: { id: string; openedAt: string; openingAmount: string } | null;
+}
+
+export type CashSessionStatus = "OPEN" | "CLOSED";
+export type CashMovementType =
+  "OPENING" | "SALE" | "REFUND" | "EXPENSE" | "WITHDRAWAL" | "DEPOSIT" | "ADJUSTMENT" | "CLOSING";
+export type CashDirection = "IN" | "OUT";
+export type ManualCashMovementType = "DEPOSIT" | "WITHDRAWAL" | "ADJUSTMENT";
+
+export interface PublicCashSession {
+  id: string;
+  branchId: string;
+  status: CashSessionStatus;
+  openedByUserId: string;
+  openedAt: string;
+  openingAmount: string;
+  closedByUserId: string | null;
+  closedAt: string | null;
+  closingAmount?: string;
+  expectedAmount?: string;
+  difference?: string;
+  notes: string | null;
+}
+
+export interface PublicCashMovement {
+  id: string;
+  sessionId: string;
+  type: CashMovementType;
+  direction: CashDirection;
+  amount: string;
+  referenceType: string | null;
+  referenceId: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface PublicExpense {
+  id: string;
+  branchId: string;
+  sessionId: string | null;
+  category: string;
+  amount: string;
+  currency: string;
+  description: string | null;
+  incurredAt: string;
+  createdAt: string;
 }
 
 export interface SalesReport {

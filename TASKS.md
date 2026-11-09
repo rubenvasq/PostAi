@@ -7,7 +7,7 @@ Estados: `Pendiente`, `En curso`, `En revisión`, `Bloqueada`, `Hecho`,
 
 | ID | Tarea | Estado | Nota |
 | --- | --- | --- | --- |
-| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Falta que una persona registre la cuenta y envíe los correos. |
+| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Endpoint sandbox de «Botón de pagos» registrado en `credibanco.md` (requiere SSO; `403` en la raíz). Falta que una persona registre la cuenta y envíe los correos. |
 
 ## En revisión
 
@@ -82,6 +82,7 @@ SDK, sandbox y condiciones comerciales para Colombia.
 | SEC-001 | Rate limiting de autenticación: límite de intentos fallidos en `POST /v1/auth/login` (por correo e IP) y `POST /v1/auth/refresh` (por IP), respuesta `429 RATE_LIMITED` con `Retry-After`, configurable por entorno (`ADR-004`) | 2026-11-07 |
 | MVP-012 | Panel web administrativo básico (`apps/admin`): auth con refresh compartido, dashboard, ventas, catálogo, clientes e inventario contra `/v1`, sin cambios de backend (`ADR-009`) | 2026-11-07 |
 | PAY-017 | Reembolsos del MVP (backend y panel): `GET/POST /v1/payments/{paymentId}/refunds`, reembolso total del saldo, idempotente, repone inventario (`RETURN`), estados `REFUNDED`, auditoría `payment.refunded`; solo métodos sin proveedor, SoftPOS real `501`; acción «Reembolsar» en el panel | 2026-11-07 |
+| MVP-014 | Caja y gastos (backend y panel): sesiones de caja por sucursal con una sola `OPEN`, movimientos manuales, gastos con/sin sesión, cierre con esperado y diferencia, movimientos automáticos `SALE`/`REFUND` en efectivo, `openCashSession` en el dashboard y página «Caja y gastos» en el panel (`ADR-010`) | 2026-11-08 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
@@ -219,13 +220,39 @@ Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
 - [x] Pruebas automáticas en verde (117 pruebas, 7 nuevas), typecheck, lint,
       `format:check` y build de API y panel en verde.
 
+### Criterios cumplidos de `MVP-014`
+
+- [x] `GET /v1/cash/sessions/current`, `GET/POST /v1/cash/sessions`, `POST
+      /v1/cash/sessions/{sessionId}/close`, `GET/POST
+      /v1/cash/sessions/{sessionId}/movements`, `GET/POST /v1/expenses`
+      implementados según el contrato v1.
+- [x] Una sola sesión `OPEN` por sucursal, reforzada con el índice único parcial
+      `cash_sessions_branch_open_key`; abrir una segunda caja responde `409`.
+- [x] El cierre calcula `expectedAmount` como entradas menos salidas de los
+      movimientos y guarda `difference` y notas del cierre.
+- [x] Los movimientos manuales (`DEPOSIT`, `WITHDRAWAL`, `ADJUSTMENT`) solo se
+      aceptan en cajas abiertas, con importe entero positivo y dirección
+      explícita.
+- [x] Los gastos pueden asociarse a una caja abierta (`EXPENSE`/`OUT`) o
+      registrarse sin afectar el efectivo; se listan con filtros y paginación.
+- [x] Los pagos y reembolsos en efectivo crean movimientos `SALE`/`REFUND`
+      dentro de la misma transacción Serializable, solo si hay caja abierta.
+- [x] `GET /v1/dashboard/summary` devuelve `openCashSession` real o `null`.
+- [x] Panel: página «Caja y gastos» con apertura, movimientos, cierre, historial
+      y gastos.
+- [x] Pruebas automáticas en verde (127 pruebas, 10 nuevas), typecheck, lint,
+      `format:check` y build de API y panel en verde.
+
 ## Próxima acción recomendada
 
-1. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
+1. Verificar `MVP-014` contra PostgreSQL 17 con el flujo real: abrir caja,
+   vender en efectivo, reembolsar, registrar un gasto y cerrar la caja con
+   diferencia.
+2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
    documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
    estado PCI MPoC y el modelo de contratación en Colombia.
-2. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.
-3. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
    `ARQ-004` (contrato interno `PaymentProvider`).

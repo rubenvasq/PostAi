@@ -1,5 +1,11 @@
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import type { InventoryMovementType, PaymentStatus, SaleStatus } from "@/lib/types";
+import type {
+  CashMovementType,
+  CashSessionStatus,
+  InventoryMovementType,
+  PaymentStatus,
+  SaleStatus,
+} from "@/lib/types";
 
 const SALE_LABELS: Record<SaleStatus, { label: string; tone: BadgeTone }> = {
   DRAFT: { label: "Borrador", tone: "neutral" },
@@ -30,6 +36,22 @@ const MOVEMENT_LABELS: Record<InventoryMovementType, string> = {
   LOSS: "Pérdida",
 };
 
+const CASH_SESSION_LABELS: Record<CashSessionStatus, { label: string; tone: BadgeTone }> = {
+  OPEN: { label: "Abierta", tone: "success" },
+  CLOSED: { label: "Cerrada", tone: "neutral" },
+};
+
+const CASH_MOVEMENT_LABELS: Record<CashMovementType, string> = {
+  OPENING: "Apertura",
+  SALE: "Venta en efectivo",
+  REFUND: "Reembolso en efectivo",
+  EXPENSE: "Gasto",
+  WITHDRAWAL: "Retiro",
+  DEPOSIT: "Depósito",
+  ADJUSTMENT: "Ajuste",
+  CLOSING: "Cierre",
+};
+
 export function SaleStatusBadge({ status }: { status: SaleStatus }) {
   const entry = SALE_LABELS[status];
   return <Badge tone={entry.tone}>{entry.label}</Badge>;
@@ -42,6 +64,15 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
 
 export function MovementTypeLabel({ type }: { type: InventoryMovementType }) {
   return <span>{MOVEMENT_LABELS[type]}</span>;
+}
+
+export function CashSessionStatusBadge({ status }: { status: CashSessionStatus }) {
+  const entry = CASH_SESSION_LABELS[status];
+  return <Badge tone={entry.tone}>{entry.label}</Badge>;
+}
+
+export function CashMovementTypeLabel({ type }: { type: CashMovementType }) {
+  return <span>{CASH_MOVEMENT_LABELS[type]}</span>;
 }
 
 export function SimulatedBadge() {
