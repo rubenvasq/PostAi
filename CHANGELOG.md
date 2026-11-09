@@ -21,6 +21,9 @@ versionado se adoptará cuando exista la primera entrega.
 - Endpoint sandbox de «Botón de pagos» de Credibanco registrado en
   `docs/providers/credibanco.md` y `PAY-002-contacto.md` (requiere SSO; la raíz
   responde `403`).
+- Requisito de **certificación para producción** de Credibanco documentado:
+  dos requests exitosos por cada servicio (100 %) antes de entregar credenciales
+  de producción, con checklist y preguntas abiertas en `credibanco.md`.
 - Reembolsos del MVP (backend y panel): `GET /v1/payments/{paymentId}/refunds`
   y `POST /v1/payments/{paymentId}/refunds` con reembolso **total** del saldo del
   pago, idempotencia por `Idempotency-Key`, reposición de inventario de productos

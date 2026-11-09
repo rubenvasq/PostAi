@@ -7,7 +7,7 @@ Estados: `Pendiente`, `En curso`, `En revisión`, `Bloqueada`, `Hecho`,
 
 | ID | Tarea | Estado | Nota |
 | --- | --- | --- | --- |
-| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Endpoint sandbox de «Botón de pagos» registrado en `credibanco.md` (requiere SSO; `403` en la raíz). Falta que una persona registre la cuenta y envíe los correos. |
+| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Endpoint sandbox de «Botón de pagos» registrado en `credibanco.md` (requiere SSO; `403` en la raíz). La producción exige **certificación: dos requests exitosos por servicio (100 %)**; falta que una persona registre la cuenta, envíe los correos y obtenga credenciales/casos de prueba. |
 
 ## En revisión
 

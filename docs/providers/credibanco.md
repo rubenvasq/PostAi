@@ -15,6 +15,11 @@
   `https://boton-pagos-3scale-preprod-apicast-staging.apps-pruebas.credibanco.com`
   — requiere credenciales/SSO; un `GET` a la raíz devuelve `403`. No confundir
   con el SDK Android de Tap to Phone. No commitear credenciales.
+- **Certificación para producción (requisito del portal, 2026-11-08):** para
+  obtener las credenciales de producción hay que completar el proceso de
+  certificación con **dos requests exitosos por cada servicio (100 % de
+  éxito)**. No se puede ejecutar hasta tener credenciales de sandbox y los
+  casos de prueba definidos por Credibanco.
 
 Adquirente/procesador colombiano (Bogotá) que ofrece "Tap to Phone" para
 convertir un Android en terminal de aceptación. Es el candidato con mejor encaje
@@ -40,7 +45,7 @@ propias".
 | Webhooks / consulta de estado | Por verificar | — | — |
 | Reembolsos | Por verificar | — | — |
 | Liquidaciones y conciliación | Por verificar | — | — |
-| Requisitos de publicación/producción | Por verificar | — | — |
+| Requisitos de publicación/producción | Certificación obligatoria: dos requests exitosos por cada servicio (100 % de éxito) antes de entregar credenciales de producción | Mensaje del portal de Credibanco (2026-11-08) | 2026-11-08 |
 
 ## Notas
 
@@ -54,11 +59,36 @@ propias".
 - Ventaja estratégica: proveedor local colombiano → onboarding, soporte y
   liquidación en el mercado objetivo, sin intermediar un adquirente extranjero.
 
+## Certificación para producción
+
+Requisito informado por Credibanco (2026-11-08):
+
+- Completar el proceso de certificación **antes** de obtener credenciales de
+  producción.
+- Ejecutar **dos requests por cada servicio**, ambos con **100 % de éxito**.
+- Aplica a las APIs del marketplace; el **SDK Android** de Tap to Phone sigue
+  bajo acuerdo comercial (`PAY-002`).
+
+Por confirmar con Credibanco:
+
+- [ ] Qué servicios exactos entran en la certificación (p. ej. creación de
+      terminales y consulta de transacciones).
+- [ ] Rutas, contratos y ambientes (sandbox/preproducción) de cada servicio.
+- [ ] Casos de prueba oficiales y datos de prueba.
+- [ ] Evidencia esperada (logs, request/response, identificadores).
+- [ ] Si la certificación cubre también "Botón de pagos" o solo las APIs del
+      marketplace.
+- [ ] Vigencia y alcance de las credenciales de producción.
+
+No ejecutar requests de certificación hasta contar con `Client ID`/`Client
+Secret` de sandbox y los casos de prueba oficiales. No commitear credenciales.
+
 ## Documentación recibida
 
 - [ ] Documentación técnica.
 - [ ] SDK y versiones.
 - [ ] Credenciales sandbox.
+- [ ] Casos de prueba de certificación.
 - [ ] Contrato o términos comerciales.
 
 ## Decisión

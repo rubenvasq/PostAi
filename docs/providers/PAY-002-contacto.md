@@ -33,6 +33,11 @@ en paralelo al contacto comercial.
   Es un endpoint de API protegido: el `GET` a la raíz responde `403`, así que hay
   que autenticarse con el token SSO/credenciales del marketplace antes de
   consumirlo. No es el SDK Android y no se commitean credenciales.
+- **Certificación para producción (2026-11-08):** el portal exige completar la
+  certificación con **dos requests exitosos por cada servicio (100 % de éxito)**
+  antes de entregar credenciales de producción. Requiere credenciales de sandbox
+  y los casos de prueba de Credibanco; aún no se ha ejecutado. Checklist y
+  preguntas abiertas en [`credibanco.md`](credibanco.md#certificación-para-producción).
 
 ### Pasos de auto-servicio (hacer primero)
 
@@ -44,6 +49,9 @@ en paralelo al contacto comercial.
 4. Descargar el PDF de documentación y anexarlo (o resumirlo) en `credibanco.md`.
 5. Registrar en `credibanco.md` qué cubre la API REST y qué queda solo para el
    SDK Android bajo acuerdo.
+6. Pedir a Credibanco los casos de prueba y el detalle de la **certificación
+   para producción** (dos requests exitosos por servicio) y planificarla cuando
+   haya credenciales de sandbox.
 
 ### Canales de contacto comercial/técnico (verificados 2026-11-07)
 
@@ -78,6 +86,9 @@ en paralelo al contacto comercial.
 > 4. **Modelo de contratación** en Colombia y **condiciones comerciales**
 >    (comisiones, liquidaciones, límite por transacción —vimos $250.000 COP—).
 > 5. Soporte de **reembolsos**, **webhooks/consulta de estado** y conciliación.
+> 6. Proceso de **certificación para producción**: servicios incluidos, casos de
+>    prueba y evidencia requerida (entendemos que son dos requests exitosos por
+>    cada servicio).
 >
 > Agradecemos agendar una llamada técnica/comercial. Quedamos atentos.
 >
@@ -128,8 +139,10 @@ El camino SoftPOS sigue devolviendo `501` hasta validarse.
 
 1. **Hoy (sin bloqueo):** registrarse en el marketplace de Credibanco y probar
    el sandbox; anexar hallazgos a `credibanco.md`.
-2. Enviar los dos correos (Credibanco y Symbiotic) para SDK Android, PCI y
-   condiciones comerciales.
-3. Si se quiere cobro real ya, arrancar la integración de Wompi en paralelo.
-4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil) y `ARQ-004`
+2. Enviar los dos correos (Credibanco y Symbiotic) para SDK Android, PCI,
+   condiciones comerciales y detalle de la **certificación para producción**.
+3. Con credenciales de sandbox y los casos de prueba, ejecutar la certificación
+   (dos requests exitosos por servicio) para habilitar producción.
+4. Si se quiere cobro real ya, arrancar la integración de Wompi en paralelo.
+5. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil) y `ARQ-004`
    (contrato interno `PaymentProvider`).
