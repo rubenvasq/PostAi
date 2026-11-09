@@ -1,7 +1,7 @@
 # Proveedor: Credibanco
 
 - **Estado:** En investigación
-- **Última actualización:** 2026-11-07
+- **Última actualización:** 2026-11-08
 - **Responsable:** Equipo PostAi
 - **Contacto comercial:** atrecom@credibanco.com · 601 3278690 ·
   018000975806 (verificado 2026-11-07). Ver borradores y auto-servicio en
@@ -10,6 +10,11 @@
   <https://developer.credibanco.com/tap-to-phone> — registro propio que entrega
   Client ID/Secret, token SSO, sandbox y Swaggers de "Creación de terminales" y
   "Consulta de Transacciones" (API REST; el SDK Android queda bajo acuerdo).
+- **Endpoint sandbox/preproducción de "Botón de pagos" (proporcionado por
+  Credibanco, 2026-11-08):**
+  `https://boton-pagos-3scale-preprod-apicast-staging.apps-pruebas.credibanco.com`
+  — requiere credenciales/SSO; un `GET` a la raíz devuelve `403`. No confundir
+  con el SDK Android de Tap to Phone. No commitear credenciales.
 
 Adquirente/procesador colombiano (Bogotá) que ofrece "Tap to Phone" para
 convertir un Android en terminal de aceptación. Es el candidato con mejor encaje

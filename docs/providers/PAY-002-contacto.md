@@ -1,6 +1,6 @@
 # PAY-002 — Contacto y acceso a SDK/sandbox
 
-- **Última actualización:** 2026-11-07
+- **Última actualización:** 2026-11-08
 - **Responsable:** Equipo PostAi
 - **Objetivo:** obtener documentación técnica, acceso al SDK/API y credenciales
   de sandbox de los candidatos prioritarios (Credibanco y Symbiotic) y confirmar
@@ -28,6 +28,11 @@ en paralelo al contacto comercial.
   transacción). El **SDK Android** para incrustar la aceptación tap-to-phone en
   la app PostAi (y el estado PCI MPoC, dispositivos y condiciones comerciales)
   sigue requiriendo acuerdo → eso es lo que pide el correo comercial de abajo.
+- **Endpoint sandbox de "Botón de pagos" (dado por Credibanco, 2026-11-08):**
+  `https://boton-pagos-3scale-preprod-apicast-staging.apps-pruebas.credibanco.com`.
+  Es un endpoint de API protegido: el `GET` a la raíz responde `403`, así que hay
+  que autenticarse con el token SSO/credenciales del marketplace antes de
+  consumirlo. No es el SDK Android y no se commitean credenciales.
 
 ### Pasos de auto-servicio (hacer primero)
 
