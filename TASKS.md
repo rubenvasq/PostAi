@@ -7,7 +7,7 @@ Estados: `Pendiente`, `En curso`, `En revisión`, `Bloqueada`, `Hecho`,
 
 | ID | Tarea | Estado | Nota |
 | --- | --- | --- | --- |
-| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Endpoint sandbox de «Botón de pagos» registrado en `credibanco.md` (requiere SSO; `403` en la raíz). La producción exige **certificación: dos requests exitosos por servicio (100 %)**; falta que una persona registre la cuenta, envíe los correos y obtenga credenciales/casos de prueba. |
+| PAY-002 | Solicitar documentación, SDK y sandbox | En curso | Contactos verificados y borradores listos en `docs/providers/PAY-002-contacto.md`. Credibanco tiene marketplace con auto-registro y sandbox (API REST); Symbiotic: sales@symbiotic.com. Endpoint sandbox de «Botón de pagos» registrado en `credibanco.md` (requiere SSO; `403` en la raíz). PDF «Botón de Pagos 2.0» analizado (2026-11-08): es una pasarela **web/API REST** (SSO, `formUrl`, consulta de estado, anulación total y callbacks), **no** el SDK Android; hallazgos y relevancia en `credibanco.md`. La producción exige **certificación: dos requests exitosos por servicio (100 %)**; falta que una persona registre la cuenta, envíe los correos y obtenga credenciales, URLs, tarjetas y casos de prueba. |
 
 ## En revisión
 
@@ -248,9 +248,11 @@ Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
 1. Verificar `MVP-014` contra PostgreSQL 17 con el flujo real: abrir caja,
    vender en efectivo, reembolsar, registrar un gasto y cerrar la caja con
    diferencia.
-2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar
-   documentación técnica, acceso al SDK y credenciales de sandbox; confirmar
-   estado PCI MPoC y el modelo de contratación en Colombia.
+2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar acceso
+   al **SDK Android**, credenciales de sandbox, URLs de prueba/producción,
+   tarjetas y casos de prueba de la certificación; confirmar estado PCI MPoC y
+   el modelo de contratación en Colombia. El PDF recibido es de «Botón de pagos»
+   (web), no del SDK.
 3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.

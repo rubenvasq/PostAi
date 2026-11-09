@@ -9,6 +9,12 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Añadido
 
+- Análisis del PDF «Documentación API Botón de Pagos 2.0» de Credibanco
+  (2026-11-08): ficha actualizada con autenticación SSO (token 300 s), servicios
+  REST, flujo de orden con `formUrl` (20 minutos), estados finales, anulación
+  total/única y callbacks con reintentos. Se deja constancia de que es una
+  pasarela **web/API**, no el SDK Android de Tap to Phone, y de que el endpoint
+  PCI no aplica a PostAi. Ver `docs/providers/credibanco.md`.
 - Caja y gastos del MVP (`MVP-014`): endpoints `GET/POST
   /v1/cash/sessions`, `GET /v1/cash/sessions/current`, `POST
   /v1/cash/sessions/{sessionId}/close`, `GET/POST

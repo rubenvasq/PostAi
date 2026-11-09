@@ -38,6 +38,11 @@ en paralelo al contacto comercial.
   antes de entregar credenciales de producción. Requiere credenciales de sandbox
   y los casos de prueba de Credibanco; aún no se ha ejecutado. Checklist y
   preguntas abiertas en [`credibanco.md`](credibanco.md#certificación-para-producción).
+- **Documentación recibida (2026-11-08):** PDF «Documentación API Botón de Pagos
+  2.0» (100 páginas). Describe la **pasarela web/API REST (iPay)** —SSO, registro
+  de pedido con `formUrl`, consulta de estado, anulación total y callbacks—, **no**
+  el SDK Android. Resumen verificado, límites y relevancia en
+  [`credibanco.md`](credibanco.md#api-botón-de-pagos--documentación-recibida-2026-11-08).
 
 ### Pasos de auto-servicio (hacer primero)
 
