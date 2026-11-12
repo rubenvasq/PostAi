@@ -69,8 +69,8 @@ resolver el comercio activo cuando un usuario tiene varias membresías.
 ### 3. Navegación por hash
 
 - Las rutas son `#/dashboard`, `#/sales`, `#/sales/{saleId}`, `#/products`,
-  `#/customers`, `#/inventory` y `#/cash`, resueltas por
-  `hooks/useHashRoute.ts`.
+  `#/customers`, `#/inventory`, `#/cash`, `#/audit` y `#/settings`, resueltas
+  por `hooks/useHashRoute.ts`.
 - Se usa hash para que el build estático funcione en cualquier servidor sin
   reglas de reescritura y para no agregar un router externo.
 - Una ruta desconocida muestra una pantalla de “no encontrada” con enlace al
@@ -97,8 +97,11 @@ resolver el comercio activo cuando un usuario tiene varias membresías.
 
 ### 6. Pagos y datos simulados
 
-- El panel es de **solo consulta** en materia de pagos: no crea, aprueba,
-  rechaza, anula ni reembolsa pagos.
+- El panel **no crea ni aprueba pagos**. Actualización 2026-11-11: sí puede
+  pedir al backend dos operaciones administrativas, que el backend valida y
+  audita: **reembolsar** un pago de un método sin proveedor (`PAY-017`) y
+  **anular** una venta sin pago aprobado (`MVP-015`). Nunca cambia estados por
+  su cuenta.
 - Los estados de venta y pago se muestran tal como los devuelve el backend.
 - Los pagos y comprobantes simulados se marcan con una insignia y un aviso
   explícito (“pago simulado / no representa un cobro real”).
@@ -132,7 +135,10 @@ resolver el comercio activo cuando un usuario tiene varias membresías.
 
 - [x] Implementar `MVP-012` (login, dashboard, ventas, catálogo, clientes e
       inventario) en `apps/admin`.
-- [ ] Verificación manual completa del panel contra PostgreSQL y la API real.
+- [x] Verificación manual completa del panel contra PostgreSQL y la API real
+      (`MVP-012` el 2026-11-07; caja, auditoría y configuración el 2026-11-11).
+- [x] Completar el panel con configuración del comercio, sesiones por
+      dispositivo, auditoría y anulación de ventas (`MVP-015`).
 - [ ] Evaluar cookies `HttpOnly` para los tokens en una entrega futura.
 - [ ] Añadir pruebas E2E del panel cuando se defina la estrategia de pruebas.
 

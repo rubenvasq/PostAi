@@ -1,4 +1,4 @@
-import { ArrowLeft, Printer, Undo2 } from "lucide-react";
+import { ArrowLeft, Ban, Printer, Undo2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ErrorState, LoadingState } from "@/components/DataState";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableWrap, Td, Th } from "@/components/ui/table";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { createRefund, getCustomer, getReceipt, getSale, listRefunds } from "@/lib/api";
+import { cancelSale, createRefund, getCustomer, getReceipt, getSale, listRefunds } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import {
   formatDateTime,
@@ -34,6 +34,10 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
   const [refundReason, setRefundReason] = useState("");
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
 
   const state = useAsyncData<SaleDetailData>(async () => {
     const sale = await getSale(saleId);
@@ -98,6 +102,22 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
     }
   }
 
+  async function submitCancel() {
+    setCancelSubmitting(true);
+    setCancelError(null);
+
+    try {
+      await cancelSale(saleId, cancelReason.trim() || undefined);
+      setCancelling(false);
+      setCancelReason("");
+      state.reload();
+    } catch (error) {
+      setCancelError(errorMessage(error));
+    } finally {
+      setCancelSubmitting(false);
+    }
+  }
+
   if (state.loading && !state.data) {
     return <LoadingState label="Cargando venta…" />;
   }
@@ -121,6 +141,11 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
   const { sale, receipt, receiptError, customer, refunds } = state.data;
   const simulated = sale.payments.some((payment) => payment.isSimulated) || receipt?.simulated;
 
+  // Misma regla que el backend: solo ventas sin pago aprobado (el backend decide).
+  const cancellable =
+    (sale.status === "DRAFT" || sale.status === "PENDING_PAYMENT") &&
+    !sale.payments.some((payment) => payment.status === "APPROVED");
+
   function refundableAmount(payment: SaleDetailData["sale"]["payments"][number]): bigint {
     if (payment.status !== "APPROVED") return 0n;
     if (payment.methodCode === "CARD_SOFTPOS") return 0n;
@@ -143,6 +168,20 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <SaleStatusBadge status={sale.status} />
             {simulated ? <SimulatedBadge /> : null}
+            {cancellable && !cancelling ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCancelReason("");
+                  setCancelError(null);
+                  setCancelling(true);
+                }}
+              >
+                <Ban className="mr-1 size-3.5" />
+                Anular venta
+              </Button>
+            ) : null}
             {receipt ? (
               <Button
                 variant="outline"
@@ -159,6 +198,42 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
           </div>
         }
       />
+
+      {cancellable && cancelling ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 print:hidden">
+          <p className="text-sm text-rose-200">
+            Vas a <strong>anular esta venta</strong>. No se puede deshacer y la venta ya no podrá
+            cobrarse.
+          </p>
+          <Input
+            value={cancelReason}
+            onChange={(event) => setCancelReason(event.target.value)}
+            placeholder="Motivo (opcional)"
+            maxLength={500}
+            className="max-w-md"
+            aria-label="Motivo de la anulación"
+          />
+          {cancelError ? <p className="text-xs text-rose-300">{cancelError}</p> : null}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={cancelSubmitting}
+              onClick={() => setCancelling(false)}
+            >
+              Volver
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={cancelSubmitting}
+              onClick={() => void submitCancel()}
+            >
+              {cancelSubmitting ? "Anulando…" : "Confirmar anulación"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {printed ? (
         <p className="text-xs text-slate-500 print:hidden">

@@ -87,6 +87,7 @@ completarla. De ella dependen `ARQ-001`, `ARQ-004`, `INF-004` y `PAY-003` a
 | MVP-012 | Panel web administrativo básico (`apps/admin`): auth con refresh compartido, dashboard, ventas, catálogo, clientes e inventario contra `/v1`, sin cambios de backend (`ADR-009`) | 2026-11-07 |
 | PAY-017 | Reembolsos del MVP (backend y panel): `GET/POST /v1/payments/{paymentId}/refunds`, reembolso total del saldo, idempotente, repone inventario (`RETURN`), estados `REFUNDED`, auditoría `payment.refunded`; solo métodos sin proveedor, SoftPOS real `501`; acción «Reembolsar» en el panel | 2026-11-07 |
 | MVP-014 | Caja y gastos (backend y panel): sesiones de caja por sucursal con una sola `OPEN`, movimientos manuales, gastos con/sin sesión, cierre con esperado y diferencia, movimientos automáticos `SALE`/`REFUND` en efectivo, `openCashSession` en el dashboard y página «Caja y gastos» en el panel (`ADR-010`) | 2026-11-08 |
+| MVP-015 | Panel web completo: página «Configuración» (datos del comercio con `PATCH /v1/merchant`, sucursales y sesiones por dispositivo con revocación), página «Auditoría» (`GET /v1/audit-logs` con filtros y paginación) y acción «Anular venta» en el detalle; sin cambios de backend (`ADR-009`) | 2026-11-11 |
 
 > `INF-002` e `INF-005` quedaron configurados y validados. La migración inicial
 > `20261107004220_init` ya está aplicada contra PostgreSQL y el flujo real de
@@ -246,6 +247,33 @@ Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
       y gastos.
 - [x] Pruebas automáticas en verde (127 pruebas, 10 nuevas), typecheck, lint,
       `format:check` y build de API y panel en verde.
+
+- [x] Verificación E2E contra PostgreSQL 17 y la API real (2026-11-11), tras
+      aplicar la migración `20261108000000_add_cash_open_unique_index`: abrir
+      caja, segunda caja `409`, venta y pago en efectivo, reembolso con
+      reposición de stock, gasto y depósito en caja, movimientos
+      `SALE`/`REFUND`/`EXPENSE`/`DEPOSIT`, cierre con esperado `46000` y
+      diferencia `-1000`, y `openCashSession` en el dashboard (21 de 21
+      comprobaciones).
+
+### Criterios cumplidos de `MVP-015`
+
+- [x] `#/settings`: edita nombre comercial, razón social e identificación con
+      `PATCH /v1/merchant` (solo campos cambiados); moneda, zona horaria y
+      estado en solo lectura; el encabezado refleja el nuevo nombre.
+- [x] `#/settings`: lista sucursales (`GET /v1/branches`) y sesiones activas
+      (`GET /v1/auth/sessions`); revoca una sesión con confirmación
+      (`DELETE /v1/auth/sessions/{sessionId}`).
+- [x] `#/audit`: lista `GET /v1/audit-logs` con filtros `from`, `to` y
+      `action`, paginación, etiquetas en español y enlace a la venta.
+- [x] Detalle de venta: «Anular venta» con motivo opcional y confirmación, solo
+      para ventas `DRAFT`/`PENDING_PAYMENT` sin pago aprobado
+      (`POST /v1/sales/{saleId}/cancel`); el backend decide.
+- [x] Sin cambios de backend ni de contrato; sin endpoints inventados.
+- [x] `format:check`, lint, typecheck, pruebas de la API y build en verde.
+- [x] Verificación de UI contra PostgreSQL 17 y la API real (2026-11-11):
+      guardar comercio, revocar sesión, auditoría con 8 eventos y anulación de
+      una venta en borrador.
 
 ## Próxima acción recomendada
 

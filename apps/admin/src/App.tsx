@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useHashRoute, type Route } from "@/hooks/useHashRoute";
+import { AuditPage } from "@/pages/AuditPage";
 import { CustomersPage } from "@/pages/CustomersPage";
 import { CashPage } from "@/pages/CashPage";
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -13,6 +14,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { SaleDetailPage } from "@/pages/SaleDetailPage";
 import { SalesPage } from "@/pages/SalesPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 
 export function App() {
   return (
@@ -61,6 +63,10 @@ function renderRoute(route: Route) {
       return <InventoryPage />;
     case "cash":
       return <CashPage />;
+    case "audit":
+      return <AuditPage />;
+    case "settings":
+      return <SettingsPage />;
     case "not-found":
       return (
         <div className="flex flex-col gap-4">

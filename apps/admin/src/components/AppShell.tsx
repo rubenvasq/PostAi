@@ -4,6 +4,8 @@ import {
   LogOut,
   Package,
   ReceiptText,
+  ScrollText,
+  Settings,
   Store,
   Users,
   Wallet,
@@ -58,6 +60,18 @@ const NAV_ITEMS: NavItem[] = [
     label: "Caja y gastos",
     icon: Wallet,
     matches: (route) => route.name === "cash",
+  },
+  {
+    route: "audit",
+    label: "Auditoría",
+    icon: ScrollText,
+    matches: (route) => route.name === "audit",
+  },
+  {
+    route: "settings",
+    label: "Configuración",
+    icon: Settings,
+    matches: (route) => route.name === "settings",
   },
 ];
 

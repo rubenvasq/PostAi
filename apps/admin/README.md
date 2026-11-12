@@ -68,6 +68,9 @@ reescritura del servidor.
 | `#/products` | Catálogo: productos/servicios, categorías e impuestos |
 | `#/customers` | Clientes: búsqueda, alta y edición |
 | `#/inventory` | Stock, ajustes y movimientos |
+| `#/cash` | Caja (apertura, movimientos, cierre e historial) y gastos |
+| `#/audit` | Auditoría: eventos con filtros por fecha y acción (solo lectura) |
+| `#/settings` | Configuración: datos del comercio, sucursales y sesiones por dispositivo |
 
 ## Autenticación
 
@@ -97,7 +100,15 @@ El build genera `apps/admin/dist` (ignorado por Git).
 
 ## Limitaciones conocidas
 
-- El panel consulta ventas y pagos, pero no los crea ni los modifica.
-- No incluye carrito, caja ni creación de ventas en esta entrega.
+- El panel no crea ventas ni pagos (eso ocurre en el punto de venta). Sí permite
+  **anular** una venta sin pago aprobado y **reembolsar** pagos de métodos sin
+  proveedor; el backend valida y decide en ambos casos.
+- No incluye carrito ni punto de venta.
+- La razón social y la identificación tributaria del comercio se pueden
+  editar pero no vaciar (el contrato no acepta `null` en `PATCH /v1/merchant`).
+- La zona horaria no se edita desde el panel: los reportes usan
+  `America/Bogota`.
+- La lista de sesiones no indica cuál es la del navegador actual (el contrato
+  no lo expone); revocarla obliga a iniciar sesión de nuevo.
 - Las tasas de impuesto solo se crean (el contrato no expone `PATCH`/`DELETE`).
 - No hay pruebas E2E automatizadas del panel; ver `ADR-009`.

@@ -8,6 +8,8 @@ export type Route =
   | { name: "customers" }
   | { name: "inventory" }
   | { name: "cash" }
+  | { name: "audit" }
+  | { name: "settings" }
   | { name: "not-found"; path: string };
 
 function parseHash(hash: string): Route {
@@ -41,6 +43,14 @@ function parseHash(hash: string): Route {
 
   if (path === "cash") {
     return { name: "cash" };
+  }
+
+  if (path === "audit") {
+    return { name: "audit" };
+  }
+
+  if (path === "settings") {
+    return { name: "settings" };
   }
 
   return { name: "not-found", path };

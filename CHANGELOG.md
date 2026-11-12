@@ -15,6 +15,13 @@ versionado se adoptará cuando exista la primera entrega.
   públicas del agregador Chebre (2,5 % + retenciones, abono el mismo día),
   catálogo del portal y enlaces rotos; preguntas 7 y 8 añadidas al borrador de
   correo en `PAY-002-contacto.md`.
+- Panel web completo (`MVP-015`): página «Configuración» con datos del comercio
+  (`PATCH /v1/merchant`), sucursales y sesiones por dispositivo con revocación;
+  página «Auditoría» sobre `GET /v1/audit-logs` con filtros por fecha y acción;
+  y acción «Anular venta» en el detalle para ventas sin pago aprobado. Sin
+  cambios de backend. `ADR-009` actualizado.
+- Verificación E2E de caja y gastos (`MVP-014`) contra PostgreSQL 17 y la API
+  real, con la migración `20261108000000_add_cash_open_unique_index` aplicada.
 - `.gitignore`: se excluyen los PDF de proveedores en la raíz (pueden traer
   tokens y tarjetas de ejemplo) y la carpeta local `.claude/`.
 - Análisis del PDF «Documentación API Botón de Pagos 2.0» de Credibanco

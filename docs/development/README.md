@@ -5,9 +5,9 @@ Guía de entorno, convenciones y flujo de trabajo del repositorio `postai`, del
 
 > **Estado:** scaffolding inicial disponible (`INF-001`), backend del MVP con
 > autenticación, comercio, carrito, catálogo, clientes, inventario, ventas,
-> pagos simulados, dashboard y auditoría, y panel web administrativo
-> implementado (`MVP-012`, en revisión). La app Android sigue pendiente de
-> `ARQ-001`.
+> pagos simulados, reembolsos, caja y gastos, dashboard y auditoría, y panel
+> web administrativo completo (`MVP-012`, `MVP-014`, `MVP-015`). La app Android
+> sigue pendiente de `ARQ-001` y del proveedor SoftPOS (`PAY-002`).
 
 ## Identidad del repositorio
 

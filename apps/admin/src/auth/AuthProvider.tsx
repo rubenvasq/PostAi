@@ -133,6 +133,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...current, merchantId }));
   }
 
+  async function reloadProfile(): Promise<void> {
+    const { user, memberships } = await getMe();
+
+    setState((current) =>
+      current.status === "authenticated" ? { ...current, user, memberships } : current,
+    );
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -140,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         selectMerchant,
+        reloadProfile,
       }}
     >
       {children}

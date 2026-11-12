@@ -14,12 +14,14 @@ import type {
   PublicCustomer,
   PublicExpense,
   PublicInventoryItem,
+  PublicAuditLog,
   PublicInventoryMovement,
   PublicMerchant,
   PublicPaymentMethod,
   PublicProduct,
   PublicRefund,
   PublicSale,
+  PublicSession,
   PublicTaxRate,
   Receipt,
   SaleStatus,
@@ -239,6 +241,44 @@ export function getBranches(): Promise<{ data: PublicBranch[] }> {
   return apiFetch<{ data: PublicBranch[] }>("/v1/branches");
 }
 
+export interface MerchantUpdateBody {
+  name?: string;
+  legalName?: string;
+  taxId?: string;
+  timezone?: string;
+}
+
+export function updateMerchant(body: MerchantUpdateBody): Promise<PublicMerchant> {
+  return apiFetch<PublicMerchant>("/v1/merchant", { method: "PATCH", body });
+}
+
+export function listSessions(): Promise<{ data: PublicSession[] }> {
+  return apiFetch<{ data: PublicSession[] }>("/v1/auth/sessions", { merchantScoped: false });
+}
+
+export function revokeSession(sessionId: string): Promise<void> {
+  return apiFetch<void>(`/v1/auth/sessions/${sessionId}`, {
+    method: "DELETE",
+    merchantScoped: false,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Auditoría
+// ---------------------------------------------------------------------------
+
+export interface AuditLogListParams {
+  from?: string;
+  to?: string;
+  action?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function listAuditLogs(params: AuditLogListParams): Promise<Paginated<PublicAuditLog>> {
+  return apiFetch<Paginated<PublicAuditLog>>(withQuery("/v1/audit-logs", params));
+}
+
 // ---------------------------------------------------------------------------
 // Catálogo
 // ---------------------------------------------------------------------------
@@ -425,6 +465,13 @@ export function listSales(params: SaleListParams): Promise<Paginated<PublicSale>
 
 export function getSale(id: string): Promise<PublicSale> {
   return apiFetch<PublicSale>(`/v1/sales/${id}`);
+}
+
+export function cancelSale(id: string, reason?: string): Promise<PublicSale> {
+  return apiFetch<PublicSale>(`/v1/sales/${id}/cancel`, {
+    method: "POST",
+    body: reason ? { reason } : {},
+  });
 }
 
 export function getReceipt(id: string): Promise<Receipt> {

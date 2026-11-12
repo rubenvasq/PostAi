@@ -13,10 +13,12 @@ Plataforma de punto de venta para comercios que permite convertir un teléfono
 Android compatible en un terminal de aceptación de pagos sin contacto mediante
 **SoftPOS**, con backend/API y panel web administrativo.
 
-> **Estado:** API con autenticación, comercio, carrito, catálogo, clientes,
-> inventario, ventas, pagos simulados, dashboard y auditoría; panel web
-> administrativo implementado (`MVP-012`, en revisión). La app Android sigue
-> pendiente de `ARQ-001`. El MVP es **Android únicamente**.
+> **Estado:** API `/v1` del MVP completa (autenticación, comercio, carrito,
+> catálogo, clientes, inventario, ventas, pagos simulados, reembolsos, caja y
+> gastos, dashboard y auditoría) y panel web administrativo con todas sus
+> pantallas (`MVP-012`, `MVP-014`, `MVP-015`). La app Android y el cobro real
+> con tarjeta siguen bloqueados por el proveedor SoftPOS (`PAY-002`) y
+> `ARQ-001`. El MVP es **Android únicamente**.
 
 ## Inicio rápido
 
