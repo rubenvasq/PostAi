@@ -1,7 +1,7 @@
 # Proveedor: Credibanco
 
 - **Estado:** En investigación
-- **Última actualización:** 2026-11-08
+- **Última actualización:** 2026-11-11
 - **Responsable:** Equipo PostAi
 - **Contacto comercial:** atrecom@credibanco.com · 601 3278690 ·
   018000975806 (verificado 2026-11-07). Ver borradores y auto-servicio en
@@ -39,12 +39,12 @@ propias".
 | Certificaciones (PCI MPoC u otras) | Por verificar — la página no detalla el estado PCI | — | — |
 | Documentación técnica | API REST pública en el marketplace (Swaggers + PDF); SDK Android bajo acuerdo | [developer.credibanco.com](https://developer.credibanco.com/tap-to-phone) | 2026-11-07 |
 | Sandbox | Sí — sandbox del marketplace con registro propio (Client ID/Secret, token SSO) | [developer.credibanco.com](https://developer.credibanco.com/tap-to-phone) | 2026-11-07 |
-| Onboarding del comercio | Por verificar (white-label "minimiza tiempos de implementación") | [credibanco.com](https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/) | 2026-11-07 |
-| Costos y comisiones | Por verificar — no publicado | — | — |
+| Onboarding del comercio | Tap to Phone (integradores): formulario de registro propio que pregunta si el comercio ya está afiliado al Sistema de Pagos de Bajo Valor y cuál es su banco adquirente. Chebre (agregador de Credibanco, app propia): persona natural → RUT, documento, certificado bancario y foto del local; persona jurídica → RUT, Cámara de Comercio, certificado bancario de la empresa, documento del representante legal y foto del local | [Formulario Tap to Phone](https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/formulario-de-registro/) · [Chebre](https://www.credibanco.com/chebre/) | 2026-11-11 |
+| Costos y comisiones | Para el SDK/integradores: no publicado. Referencia pública del propio «Datáfono Digital» de Chebre (Tap to Phone con app de Credibanco): app gratis, **2,5 % por transacción + retenciones**; pagos en línea (link/botón/recurrentes) **$800 COP por transacción + 2,5 % + retenciones** | [Chebre](https://www.credibanco.com/chebre/) | 2026-11-11 |
 | Notificación de estados | Botón de pagos: callbacks con `mdOrder`, `orderNumber`, `operation` y `status`; el comercio debe responder HTTP 200 | PDF «Botón de Pagos 2.0», §9 | 2026-11-08 |
 | Webhooks / consulta de estado | Botón de pagos: `v1/Pago/Boton/EstadoPago` y callbacks con reintentos hasta 6 fallos | PDF «Botón de Pagos 2.0», §7.6 y §9 | 2026-11-08 |
 | Reembolsos | Botón de pagos: anulación total, una sola vez y dentro de una ventana a confirmar; el SDK Android sigue por verificar | PDF «Botón de Pagos 2.0», §7.5 | 2026-11-08 |
-| Liquidaciones y conciliación | Por verificar | — | — |
+| Liquidaciones y conciliación | Chebre (modelo agregador): abono el **mismo día** si la transacción es antes de las 3:00 p. m., si no el siguiente día hábil; transacciones y reportes en **Hub Connect**. Para integradores SDK: por verificar. API «Consulta de información transaccional» (near real time) y «Voucher Digital» en el catálogo del portal | [Chebre](https://www.credibanco.com/chebre/) · [developer.credibanco.com/docs](https://developer.credibanco.com/docs) | 2026-11-11 |
 | Requisitos de publicación/producción | Certificación obligatoria: dos requests exitosos por cada servicio (100 % de éxito) antes de entregar credenciales de producción | Mensaje del portal de Credibanco (2026-11-08) | 2026-11-08 |
 
 ## Notas
@@ -58,6 +58,67 @@ propias".
   de la app PostAi.
 - Ventaja estratégica: proveedor local colombiano → onboarding, soporte y
   liquidación en el mercado objetivo, sin intermediar un adquirente extranjero.
+
+## Revisión de credibanco.com (2026-11-11)
+
+Recorrido por el sitio público y el portal de desarrolladores para cubrir los
+«Por verificar» de la tabla. Lo que se encontró y lo que sigue sin publicarse:
+
+### Tap to Phone para integradores (lo que PostAi necesita)
+
+- La página de Tap to Phone no cambió: SDK / App to App (deep link) / marca
+  blanca, Android 8.1+, NFC obligatorio, hasta $250.000 COP, ventas y
+  anulaciones desde la app, impuestos (IVA, IAC, propina), comprobante por QR.
+- El único camino publicado para el SDK es el **formulario de registro**
+  (<https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/formulario-de-registro/>):
+  nombres, empresa, NIT/CC + DV, correo, teléfono, si el comercio está afiliado
+  al **Sistema de Pagos de Bajo Valor** y su **banco adquirente**. Credibanco
+  llama después. Esa pregunta sugiere que el integrador (o sus comercios)
+  necesita un adquirente/afiliación previa; confirmar en la llamada.
+- El sitio **no publica**: estado PCI MPoC/CPoC del SDK, lista de dispositivos,
+  documentación del SDK, comisiones para integradores ni modelo de contrato. La
+  búsqueda interna del sitio para «tap to phone» no devuelve resultados.
+- Portal de desarrolladores (<https://developer.credibanco.com/tap-to-phone>):
+  «API Tap to phone» con *crear terminales* y *consultar transacciones* de una o
+  varias terminales; el botón «Probar» lleva al login
+  (`/login?api=tap-to-phone=api-tap-to-phone-sw`). Catálogo público en `/docs`:
+  Conciliación, Pagos, Afiliación, «Consulta de información transaccional»
+  (near real time) y «Voucher Digital». Los enlaces «Onboarding Digital»
+  (`/comercios`) y «Terminalización en línea» (`/terminales`) responden **404**
+  a 2026-11-11.
+
+### Chebre — la propia app Tap to Phone de Credibanco (referencia, no el SDK)
+
+Credibanco opera **Chebre** (<https://www.credibanco.com/chebre/>), un modelo de
+**agregación** en alianza con Payments Way. Su «Datáfono Digital» es Tap to
+Phone con la app de Credibanco (Android con NFC y datos). Sirve como referencia
+de condiciones, no como integración para PostAi:
+
+- Comisión **2,5 % por transacción + retenciones**; app gratis, sin equipo.
+- Pagos en línea (link, botón, recurrentes, referenciados, programados):
+  **$800 COP por transacción + 2,5 % + retenciones**.
+- Abono el **mismo día** si la venta es antes de las 3:00 p. m.; después, el
+  siguiente día hábil. Transacciones y reportes en **Hub Connect**.
+- Afiliación: personas naturales y jurídicas; documentos listados en la tabla.
+- Canales Chebre: 601 796 5016 · WhatsApp 315 555 4824 · contacto@chebre.com.
+- La página declara «certificaciones PCI y tecnología antifraude» de forma
+  genérica; **no** acredita PCI MPoC del SDK.
+
+**Implicación:** si PostAi usara la app de Credibanco (deep link o marca blanca)
+en lugar del SDK, el cobro saldría a la app de Credibanco y volvería a PostAi;
+el backend seguiría conciliando por la API de consulta de transacciones. Es una
+opción válida de respaldo si el SDK no se entrega a comercios pequeños; se
+decide en `ARQ-001`/`ARQ-004` con la respuesta comercial.
+
+### Qué sigue requiriendo contacto humano
+
+- [ ] Enviar el formulario de registro de Tap to Phone (requiere NIT y datos de
+      una persona) y atender la llamada.
+- [ ] Confirmar si PostAi puede ser «comercio con app propia» sin ser
+      agregador/pasarela, y si sus comercios necesitan afiliación previa a un
+      adquirente.
+- [ ] PCI MPoC del SDK, dispositivos soportados, documentación del SDK,
+      comisiones para integradores y contrato.
 
 ## API «Botón de pagos» — documentación recibida (2026-11-08)
 

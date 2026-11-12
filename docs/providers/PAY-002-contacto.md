@@ -1,6 +1,6 @@
 # PAY-002 — Contacto y acceso a SDK/sandbox
 
-- **Última actualización:** 2026-11-08
+- **Última actualización:** 2026-11-11
 - **Responsable:** Equipo PostAi
 - **Objetivo:** obtener documentación técnica, acceso al SDK/API y credenciales
   de sandbox de los candidatos prioritarios (Credibanco y Symbiotic) y confirmar
@@ -46,6 +46,11 @@ en paralelo al contacto comercial.
 
 ### Pasos de auto-servicio (hacer primero)
 
+0. Enviar el **formulario de registro de Tap to Phone**
+   (<https://www.credibanco.com/soluciones-pagos-punto-venta-y-domicilio/tap-to-phone/formulario-de-registro/>):
+   nombres, empresa, NIT/CC + DV, correo, teléfono, si el comercio está afiliado
+   al Sistema de Pagos de Bajo Valor y su banco adquirente. Es el único canal
+   publicado para el SDK (revisado 2026-11-11); Credibanco llama después.
 1. Entrar a <https://developer.credibanco.com/tap-to-phone> y "Crea tu cuenta".
 2. Guardar `Client ID` / `Client Secret` del sandbox (nunca commitearlos; van en
    `.env` local, fuera del repo).
@@ -68,6 +73,12 @@ en paralelo al contacto comercial.
 - **Dirección:** Carrera 68 75 A 50, Metrópolis, Bogotá.
 - Alianza tecnológica declarada con **Yazara** (software de pagos) y foco en
   "aplicaciones de bancos, fintech y terceros".
+- **Chebre** (agregador de Credibanco con app Tap to Phone propia, revisado
+  2026-11-11): 601 796 5016 · WhatsApp 315 555 4824 · contacto@chebre.com.
+  Referencia de condiciones (2,5 % + retenciones, abono el mismo día antes de
+  las 3:00 p. m.) y alternativa por deep link/marca blanca si el SDK no se
+  entrega a comercios pequeños; detalle en
+  [`credibanco.md`](credibanco.md#revisión-de-credibancocom-2026-11-11).
 
 ### Borrador de correo — Credibanco (comercial + técnico)
 
@@ -94,6 +105,11 @@ en paralelo al contacto comercial.
 > 6. Proceso de **certificación para producción**: servicios incluidos, casos de
 >    prueba y evidencia requerida (entendemos que son dos requests exitosos por
 >    cada servicio).
+> 7. Si PostAi puede integrar como **comercio con app propia** sin ser
+>    agregador ni pasarela, y si nuestros comercios requieren afiliación previa
+>    al Sistema de Pagos de Bajo Valor con un banco adquirente.
+> 8. Diferencias de condiciones entre el **SDK** y las vías **App to App (deep
+>    link)** o **marca blanca**, y si estas últimas aplican sobre la app Chebre.
 >
 > Agradecemos agendar una llamada técnica/comercial. Quedamos atentos.
 >

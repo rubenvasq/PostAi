@@ -9,6 +9,12 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Añadido
 
+- `PAY-002`: revisión de credibanco.com y del portal de desarrolladores
+  (2026-11-11) en `docs/providers/credibanco.md`: formulario de registro de
+  Tap to Phone como único canal para el SDK, requisitos de afiliación, condiciones
+  públicas del agregador Chebre (2,5 % + retenciones, abono el mismo día),
+  catálogo del portal y enlaces rotos; preguntas 7 y 8 añadidas al borrador de
+  correo en `PAY-002-contacto.md`.
 - `.gitignore`: se excluyen los PDF de proveedores en la raíz (pueden traer
   tokens y tarjetas de ejemplo) y la carpeta local `.claude/`.
 - Análisis del PDF «Documentación API Botón de Pagos 2.0» de Credibanco

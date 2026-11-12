@@ -45,8 +45,12 @@ _(nada por ahora)_
 
 ## Bloqueadas
 
-Las tareas `PAY-010` a `PAY-017` permanecen bloqueadas hasta confirmar proveedor,
-SDK, sandbox y condiciones comerciales para Colombia.
+Las tareas `PAY-010` a `PAY-016` permanecen bloqueadas hasta confirmar proveedor,
+SDK, sandbox y condiciones comerciales para Colombia. `PAY-002` necesita una
+acción humana (registrar la cuenta en el portal de Credibanco y enviar los
+correos de `docs/providers/PAY-002-contacto.md`); ningún agente puede
+completarla. De ella dependen `ARQ-001`, `ARQ-004`, `INF-004` y `PAY-003` a
+`PAY-005`.
 
 ## Hecho
 
@@ -245,16 +249,17 @@ Uso y variables de entorno en [`apps/admin/README.md`](apps/admin/README.md).
 
 ## Próxima acción recomendada
 
-1. Verificar `MVP-014` contra PostgreSQL 17 con el flujo real: abrir caja,
-   vender en efectivo, reembolsar, registrar un gasto y cerrar la caja con
-   diferencia.
-2. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar acceso
+1. `PAY-002`: contactar a **Credibanco** y **Symbiotic** para solicitar acceso
    al **SDK Android**, credenciales de sandbox, URLs de prueba/producción,
    tarjetas y casos de prueba de la certificación; confirmar estado PCI MPoC y
    el modelo de contratación en Colombia. El PDF recibido es de «Botón de pagos»
-   (web), no del SDK.
-3. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
+   (web), no del SDK. Revisión de credibanco.com del 2026-11-11: el único canal
+   publicado para el SDK es el formulario de registro de Tap to Phone; el sitio
+   no publica PCI MPoC, dispositivos, documentación del SDK ni comisiones para
+   integradores (sí las de su agregador Chebre: 2,5 % + retenciones). Ver
+   `docs/providers/credibanco.md`.
+2. Confirmar si **SumUp**, **Redeban** y **Bold** ofrecen SDK de integración
    para terceros; si solo operan con su app propia, marcarlos `Descartado` para
    el modelo de PostAi.
-4. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
+3. Con la respuesta de SDK real, retomar `ARQ-001` (stack móvil, `ADR-001`) y
    `ARQ-004` (contrato interno `PaymentProvider`).

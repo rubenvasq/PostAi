@@ -26,12 +26,16 @@ La decisión completa está en
 
 ## Estado actual
 
-- **Fase:** scaffolding inicial y diseño de arquitectura.
-- **Código:** monorepo con API y panel web; app Android pendiente de `ARQ-001`.
+- **Fase:** MVP de backend y panel web completo con pagos **simulados**; a la
+  espera del proveedor SoftPOS para la app Android y el cobro real.
+- **Código:** monorepo con API `/v1` y panel web; app Android pendiente de
+  `ARQ-001` (que depende del SDK real, `PAY-002`).
 - **Repositorio:** publicado en GitHub
   ([`rubenvasq/PostAi`](https://github.com/rubenvasq/PostAi)); CI en verde.
 - **Plataforma del MVP:** Android únicamente. iOS queda fuera del alcance.
-- **Proveedor SoftPOS:** no seleccionado ni validado para Colombia.
+- **Proveedor SoftPOS:** no seleccionado ni validado para Colombia. Candidatos
+  prioritarios: Credibanco y Symbiotic (`docs/providers/`); falta el contacto
+  humano de `PAY-002`.
 
 ## Objetivo
 

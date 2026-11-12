@@ -59,10 +59,12 @@ Con Docker disponible: `npm run db:up` para PostgreSQL local. Más detalle en
 
 ## Próximos pasos
 
-1. Revisar y verificar manualmente el panel web (`MVP-012`).
-2. Solicitar documentación, SDK y sandbox a los proveedores SoftPOS
-   preseleccionados (`PAY-002`).
-3. Decidir el stack móvil (`ARQ-001`) y el contrato `PaymentProvider`
-   (`ARQ-004`).
+1. Solicitar SDK Android, sandbox y condiciones a los proveedores SoftPOS
+   preseleccionados (`PAY-002`); requiere que una persona registre la cuenta y
+   envíe los correos de `docs/providers/PAY-002-contacto.md`.
+2. Con el SDK real, decidir el stack móvil (`ARQ-001`) y el contrato
+   `PaymentProvider` (`ARQ-004`).
+3. Crear la app Android (`INF-004`) e integrar el SoftPOS (`PAY-010` a
+   `PAY-016`).
 
 Consulta [`TASKS.md`](TASKS.md) para el detalle.
