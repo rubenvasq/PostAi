@@ -34,3 +34,10 @@ Thumbs.db
 .idea/
 *.iml
 .vscode/
+
+# Documentación de proveedores recibida bajo acuerdo (puede traer tokens y
+# tarjetas de ejemplo): se analiza en docs/providers/, no se versiona.
+/*.pdf
+
+# Configuración local de herramientas de agente
+.claude/

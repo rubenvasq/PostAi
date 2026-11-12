@@ -9,6 +9,8 @@ versionado se adoptará cuando exista la primera entrega.
 
 ### Añadido
 
+- `.gitignore`: se excluyen los PDF de proveedores en la raíz (pueden traer
+  tokens y tarjetas de ejemplo) y la carpeta local `.claude/`.
 - Análisis del PDF «Documentación API Botón de Pagos 2.0» de Credibanco
   (2026-11-08): ficha actualizada con autenticación SSO (token 300 s), servicios
   REST, flujo de orden con `formUrl` (20 minutos), estados finales, anulación
